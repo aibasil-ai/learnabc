@@ -1,7 +1,7 @@
 export const DEFAULT_SETTINGS = {
-  lettersPerReward: 5,
-  rewardSeconds: 180,
-  youtubeVideoId: 'diQatYOQLV8',
+  lettersPerReward: 3,
+  rewardSeconds: 30,
+  youtubeVideoId: '-yG4mBzGwq8',
   rewardOrientation: 'landscape',
   parentPin: '1234',
   rewardEnabled: true

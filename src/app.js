@@ -1291,8 +1291,16 @@ function closeParentOverlay() {
 
 function saveParentSettings() {
   const previousPlayback = state.rewardPlayback;
-  const lettersPerReward = clamp(Number(dom.lettersPerRewardInput.value) || 5, 1, 26);
-  const rewardSeconds = clamp(Number(dom.rewardSecondsInput.value) || 180, 10, 600);
+  const lettersPerReward = clamp(
+    Number(dom.lettersPerRewardInput.value) || DEFAULT_SETTINGS.lettersPerReward,
+    1,
+    26
+  );
+  const rewardSeconds = clamp(
+    Number(dom.rewardSecondsInput.value) || DEFAULT_SETTINGS.rewardSeconds,
+    10,
+    600
+  );
   const youtubeInput = dom.youtubeInput.value.trim();
   const rewardOrientation = normalizeRewardOrientation(dom.rewardOrientationInput.value);
   const parsedVideoId = parseYouTubeVideoId(youtubeInput);

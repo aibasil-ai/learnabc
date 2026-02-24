@@ -11,16 +11,16 @@ import {
   updateSettings
 } from '../src/reward-engine.js';
 
-test('每學滿 5 個不同字母會解鎖 1 次獎勵', () => {
+test('每學滿 3 個不同字母會解鎖 1 次獎勵', () => {
   let state = createInitialState(DEFAULT_SETTINGS);
-  ['A', 'B', 'C', 'D', 'E'].forEach((letter) => {
+  ['A', 'B', 'C'].forEach((letter) => {
     state = markLetterLearned(state, letter);
   });
 
   const status = getRewardStatus(state);
-  assert.equal(status.learnedCount, 5);
+  assert.equal(status.learnedCount, 3);
   assert.equal(status.availableSessions, 1);
-  assert.equal(status.nextMilestoneAt, 10);
+  assert.equal(status.nextMilestoneAt, 6);
 });
 
 test('重複學同一字母不重複計算', () => {
@@ -35,7 +35,7 @@ test('重複學同一字母不重複計算', () => {
 });
 
 test('消耗一次獎勵後可用次數會扣除', () => {
-  let state = createInitialState(DEFAULT_SETTINGS);
+  let state = createInitialState({ ...DEFAULT_SETTINGS, lettersPerReward: 5 });
   ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((letter) => {
     state = markLetterLearned(state, letter);
   });
@@ -63,7 +63,7 @@ test('可依家長設定調整門檻', () => {
 });
 
 test('調整獎勵門檻後會校正已觀看次數，後續仍可再次解鎖', () => {
-  let state = createInitialState(DEFAULT_SETTINGS);
+  let state = createInitialState({ ...DEFAULT_SETTINGS, lettersPerReward: 5 });
   ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((letter) => {
     state = markLetterLearned(state, letter);
   });
