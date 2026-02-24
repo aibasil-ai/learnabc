@@ -93,6 +93,7 @@ const dom = {
   resumeRewardBtn: document.getElementById('resume-reward-btn'),
   toggleRewardLockBtn: document.getElementById('toggle-reward-lock-btn'),
   toast: document.getElementById('toast'),
+  toggleFullscreenBtn: document.getElementById('toggle-fullscreen-btn'),
   openPinBtn: document.getElementById('open-pin-btn'),
   pinOverlay: document.getElementById('pin-overlay'),
   pinInput: document.getElementById('pin-input'),
@@ -127,6 +128,7 @@ function init() {
   applyRewardVideoOrientation();
   renderAll();
   renderMobilePanels();
+  updateFullscreenButtonUI();
   maybeResumeActiveReward();
   updateLearnedButtonState();
 }
@@ -173,6 +175,9 @@ function bindEvents() {
     renderQuiz();
   });
 
+  dom.toggleFullscreenBtn?.addEventListener('click', () => {
+    toggleFullscreen();
+  });
   dom.openPinBtn.addEventListener('click', () => openPinOverlay('parent'));
   dom.pinCancelBtn.addEventListener('click', closePinOverlay);
   dom.pinSubmitBtn.addEventListener('click', verifyPin);
@@ -214,6 +219,8 @@ function bindEvents() {
     applyRewardVideoOrientation();
   });
   window.addEventListener('pagehide', stopSpeech);
+  document.addEventListener('fullscreenchange', updateFullscreenButtonUI);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenButtonUI);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopSpeech();
@@ -674,6 +681,7 @@ function handleLearnCheckAnswer(optionLetter) {
   }
 
   const learnedLetter = learnCheckState.targetLetter;
+  playCorrectAnswerSound();
   completeLearnedLetter(learnedLetter);
   closeLearnCheck();
   jumpToNextUnlearnedLetter(learnedLetter);
@@ -1422,6 +1430,62 @@ function updateLearnedButtonState() {
   dom.learnedBtn.title = ready ? '我學會了' : '請先播放字母與單字';
 }
 
+function isFullscreenActive() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function isFullscreenSupported() {
+  const root = document.documentElement;
+  return Boolean(
+    document.fullscreenEnabled ||
+      document.webkitFullscreenEnabled ||
+      root.requestFullscreen ||
+      root.webkitRequestFullscreen
+  );
+}
+
+async function toggleFullscreen() {
+  if (!isFullscreenSupported()) {
+    showToast('此裝置或瀏覽器目前不支援全螢幕。');
+    return;
+  }
+
+  const root = document.documentElement;
+  try {
+    if (isFullscreenActive()) {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    } else if (root.requestFullscreen) {
+      await root.requestFullscreen();
+    } else if (root.webkitRequestFullscreen) {
+      root.webkitRequestFullscreen();
+    }
+  } catch (_error) {
+    showToast('全螢幕切換失敗，請再試一次。');
+  } finally {
+    updateFullscreenButtonUI();
+  }
+}
+
+function updateFullscreenButtonUI() {
+  if (!dom.toggleFullscreenBtn) {
+    return;
+  }
+
+  const active = isFullscreenActive();
+  const supported = isFullscreenSupported();
+  const icon = active ? '🗗' : '⛶';
+  const label = active ? '退出全螢幕' : '切換全螢幕';
+
+  dom.toggleFullscreenBtn.disabled = !supported;
+  dom.toggleFullscreenBtn.setAttribute('aria-label', label);
+  dom.toggleFullscreenBtn.title = supported ? label : '此瀏覽器不支援全螢幕';
+  dom.toggleFullscreenBtn.innerHTML = `<span aria-hidden="true">${icon}</span>`;
+}
+
 function normalizeActiveReward(value) {
   const remainingSeconds = clamp(Number(value?.remainingSeconds) || 0, 0, 600);
   return {
@@ -1498,6 +1562,54 @@ function playWrongAnswerSound() {
 
       gain.gain.setValueAtTime(0.0001, toneStart);
       gain.gain.exponentialRampToValueAtTime(0.48, toneStart + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+      oscillator.start(toneStart);
+      oscillator.stop(toneEnd);
+      supportOscillator.start(toneStart);
+      supportOscillator.stop(toneEnd);
+    });
+  };
+
+  if (uiAudioContext.state === 'suspended') {
+    uiAudioContext.resume().then(playPattern).catch(() => {});
+    return;
+  }
+
+  playPattern();
+}
+
+function playCorrectAnswerSound() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    return;
+  }
+
+  if (!uiAudioContext) {
+    uiAudioContext = new AudioContextCtor();
+  }
+
+  const playPattern = () => {
+    const now = uiAudioContext.currentTime + 0.01;
+    const tones = [540, 680, 840];
+
+    tones.forEach((frequency, index) => {
+      const oscillator = uiAudioContext.createOscillator();
+      const supportOscillator = uiAudioContext.createOscillator();
+      const gain = uiAudioContext.createGain();
+      const toneStart = now + index * 0.11;
+      const toneEnd = toneStart + 0.14;
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      supportOscillator.type = 'triangle';
+      supportOscillator.frequency.value = frequency * 2;
+      oscillator.connect(gain);
+      supportOscillator.connect(gain);
+      gain.connect(uiAudioContext.destination);
+
+      gain.gain.setValueAtTime(0.0001, toneStart);
+      gain.gain.exponentialRampToValueAtTime(0.36, toneStart + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
 
       oscillator.start(toneStart);
