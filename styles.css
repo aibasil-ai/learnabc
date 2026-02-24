@@ -591,8 +591,8 @@ h1 {
   }
 
   .emoji-display {
-    width: min(34vw, 120px);
-    font-size: clamp(2.8rem, 13vw, 4.2rem);
+    width: min(46vw, 170px);
+    font-size: clamp(3.6rem, 18vw, 6rem);
     border-radius: 18px;
   }
 
