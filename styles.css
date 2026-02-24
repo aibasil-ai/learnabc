@@ -483,6 +483,13 @@ h1 {
   flex-wrap: wrap;
 }
 
+.form-error {
+  margin: 2px 0 0;
+  color: #b42345;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
 .check-row {
   display: flex;
   align-items: center;

@@ -47,6 +47,7 @@ let lastSpokenQuizPrompt = '';
 let lastSpokenLearnCheckPrompt = '';
 let forceSpeakQuizPrompt = false;
 let speechPlaybackToken = 0;
+let uiAudioContext = null;
 
 let youtubeReadyResolver = null;
 const youtubeReadyPromise = new Promise((resolve) => {
@@ -95,6 +96,7 @@ const dom = {
   openPinBtn: document.getElementById('open-pin-btn'),
   pinOverlay: document.getElementById('pin-overlay'),
   pinInput: document.getElementById('pin-input'),
+  pinError: document.getElementById('pin-error'),
   pinCancelBtn: document.getElementById('pin-cancel-btn'),
   pinSubmitBtn: document.getElementById('pin-submit-btn'),
   parentOverlay: document.getElementById('parent-overlay'),
@@ -180,6 +182,7 @@ function bindEvents() {
       verifyPin();
     }
   });
+  dom.pinInput.addEventListener('input', clearPinError);
 
   dom.parentCloseBtn.addEventListener('click', closeParentOverlay);
   dom.saveSettingsBtn.addEventListener('click', saveParentSettings);
@@ -650,12 +653,15 @@ function handleLearnCheckAnswer(optionLetter) {
 
   const isCorrect = optionLetter === learnCheckState.targetLetter;
   if (!isCorrect) {
+    playWrongAnswerSound();
     dom.learnCheckResult.textContent = `還差一點點，再試一次。${learnCheckState.targetWord} 的開頭不是 ${optionLetter}。`;
     return;
   }
 
-  completeLearnedLetter(learnCheckState.targetLetter);
+  const learnedLetter = learnCheckState.targetLetter;
+  completeLearnedLetter(learnedLetter);
   closeLearnCheck();
+  jumpToNextUnlearnedLetter(learnedLetter);
 }
 
 function completeLearnedLetter(letter) {
@@ -1190,10 +1196,12 @@ function openPinOverlay(mode = 'parent') {
   pinPurpose = mode;
   dom.pinOverlay.classList.remove('hidden');
   dom.pinInput.value = '';
+  clearPinError();
   dom.pinInput.focus();
 }
 
 function closePinOverlay() {
+  clearPinError();
   dom.pinOverlay.classList.add('hidden');
   pinPurpose = 'parent';
 }
@@ -1201,11 +1209,12 @@ function closePinOverlay() {
 function verifyPin() {
   const inputPin = dom.pinInput.value.trim();
   if (inputPin !== state.settings.parentPin) {
-    showToast('PIN 錯誤，請家長重新輸入。');
+    showPinError('PIN 錯誤，請重新輸入。');
     dom.pinInput.value = '';
     dom.pinInput.focus();
     return;
   }
+  clearPinError();
 
   const currentPurpose = pinPurpose;
   closePinOverlay();
@@ -1218,6 +1227,25 @@ function verifyPin() {
   }
 
   openParentOverlay();
+}
+
+function showPinError(message) {
+  if (!dom.pinError) {
+    showToast(message);
+    return;
+  }
+
+  dom.pinError.textContent = message;
+  dom.pinError.classList.remove('hidden');
+}
+
+function clearPinError() {
+  if (!dom.pinError) {
+    return;
+  }
+
+  dom.pinError.textContent = '';
+  dom.pinError.classList.add('hidden');
 }
 
 function openParentOverlay() {
@@ -1406,6 +1434,59 @@ function dedupeLetters(input) {
   });
 
   return result;
+}
+
+function jumpToNextUnlearnedLetter(learnedLetter) {
+  const startIndex = LETTERS.findIndex((item) => item.letter === learnedLetter);
+  if (startIndex < 0) {
+    return;
+  }
+
+  for (let offset = 1; offset <= LETTERS.length; offset += 1) {
+    const nextIndex = (startIndex + offset) % LETTERS.length;
+    const nextLetter = LETTERS[nextIndex].letter;
+    if (!state.learnedLetters.includes(nextLetter)) {
+      selectLetterByIndex(nextIndex);
+      return;
+    }
+  }
+}
+
+function playWrongAnswerSound() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    return;
+  }
+
+  if (!uiAudioContext) {
+    uiAudioContext = new AudioContextCtor();
+  }
+
+  if (uiAudioContext.state === 'suspended') {
+    uiAudioContext.resume().catch(() => {});
+  }
+
+  const now = uiAudioContext.currentTime;
+  const tones = [280, 190];
+
+  tones.forEach((frequency, index) => {
+    const oscillator = uiAudioContext.createOscillator();
+    const gain = uiAudioContext.createGain();
+    const toneStart = now + index * 0.11;
+    const toneEnd = toneStart + 0.1;
+
+    oscillator.type = 'triangle';
+    oscillator.frequency.value = frequency;
+    oscillator.connect(gain);
+    gain.connect(uiAudioContext.destination);
+
+    gain.gain.setValueAtTime(0.0001, toneStart);
+    gain.gain.exponentialRampToValueAtTime(0.22, toneStart + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+    oscillator.start(toneStart);
+    oscillator.stop(toneEnd);
+  });
 }
 
 function burstStars() {
