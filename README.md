@@ -28,4 +28,5 @@ npm test
 ## 專案文件
 
 - 操作教學手冊：`docs/操作教學手冊.md`
+- 單頁教學網站：`docs/index.html`
 - 功能實作計畫：`docs/plans/2026-02-24-abc-learning-game.md`
