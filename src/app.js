@@ -1368,7 +1368,9 @@ function applyRewardVideoOrientation() {
   }
 
   const orientation = normalizeRewardOrientation(state.settings.rewardOrientation);
+  const shouldUseMobileLandscape = orientation === 'portrait' && window.matchMedia('(max-width: 980px)').matches;
   dom.videoShell.classList.toggle('portrait', orientation === 'portrait');
+  dom.videoShell.classList.toggle('mobile-landscape-playback', shouldUseMobileLandscape);
 }
 
 function updateLearnedButtonState() {
