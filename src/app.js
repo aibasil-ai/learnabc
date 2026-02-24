@@ -620,6 +620,14 @@ function speakLearnCheckPrompt(targetLetter) {
   }
 
   const speechToken = beginSpeechPlayback();
+  const chinesePrefixUtterance = new SpeechSynthesisUtterance('字母');
+  chinesePrefixUtterance.lang = 'zh-TW';
+  chinesePrefixUtterance.rate = 1;
+  chinesePrefixUtterance.pitch = 1;
+  if (preferredZhVoice) {
+    chinesePrefixUtterance.voice = preferredZhVoice;
+  }
+
   const letterUtterance = new SpeechSynthesisUtterance(String(targetLetter || ''));
   letterUtterance.lang = 'en-US';
   letterUtterance.rate = 0.9;
@@ -628,22 +636,29 @@ function speakLearnCheckPrompt(targetLetter) {
     letterUtterance.voice = preferredVoice;
   }
 
-  const chineseUtterance = new SpeechSynthesisUtterance('字母是哪一個？');
-  chineseUtterance.lang = 'zh-TW';
-  chineseUtterance.rate = 1;
-  chineseUtterance.pitch = 1;
+  const chineseSuffixUtterance = new SpeechSynthesisUtterance('是哪一個？');
+  chineseSuffixUtterance.lang = 'zh-TW';
+  chineseSuffixUtterance.rate = 1;
+  chineseSuffixUtterance.pitch = 1;
   if (preferredZhVoice) {
-    chineseUtterance.voice = preferredZhVoice;
+    chineseSuffixUtterance.voice = preferredZhVoice;
+  }
+
+  chinesePrefixUtterance.onend = () => {
+    if (speechToken !== speechPlaybackToken) {
+      return;
+    }
+    window.speechSynthesis.speak(letterUtterance);
   }
 
   letterUtterance.onend = () => {
     if (speechToken !== speechPlaybackToken) {
       return;
     }
-    window.speechSynthesis.speak(chineseUtterance);
+    window.speechSynthesis.speak(chineseSuffixUtterance);
   };
 
-  window.speechSynthesis.speak(letterUtterance);
+  window.speechSynthesis.speak(chinesePrefixUtterance);
 }
 
 function handleLearnCheckAnswer(optionLetter) {
@@ -1464,25 +1479,31 @@ function playWrongAnswerSound() {
 
   const playPattern = () => {
     const now = uiAudioContext.currentTime + 0.01;
-    const tones = [300, 210];
+    const tones = [720, 520, 360];
 
     tones.forEach((frequency, index) => {
       const oscillator = uiAudioContext.createOscillator();
+      const supportOscillator = uiAudioContext.createOscillator();
       const gain = uiAudioContext.createGain();
-      const toneStart = now + index * 0.12;
-      const toneEnd = toneStart + 0.11;
+      const toneStart = now + index * 0.16;
+      const toneEnd = toneStart + 0.14;
 
-      oscillator.type = 'triangle';
+      oscillator.type = 'square';
       oscillator.frequency.value = frequency;
+      supportOscillator.type = 'triangle';
+      supportOscillator.frequency.value = Math.max(120, frequency / 2);
       oscillator.connect(gain);
+      supportOscillator.connect(gain);
       gain.connect(uiAudioContext.destination);
 
       gain.gain.setValueAtTime(0.0001, toneStart);
-      gain.gain.exponentialRampToValueAtTime(0.34, toneStart + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.48, toneStart + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
 
       oscillator.start(toneStart);
       oscillator.stop(toneEnd);
+      supportOscillator.start(toneStart);
+      supportOscillator.stop(toneEnd);
     });
   };
 
