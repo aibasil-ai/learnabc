@@ -593,14 +593,14 @@ function renderLearnCheck() {
   }
 
   dom.learnCheckTitle.textContent = `學會挑戰 ${learnCheckState.targetLetter}`;
-  const learnCheckPromptText = `「${learnCheckState.targetWord}」的開頭字母是哪一個？`;
+  const learnCheckPromptText = `字母「${learnCheckState.targetLetter}」是哪一個？`;
   dom.learnCheckPrompt.textContent = learnCheckPromptText;
   dom.learnCheckResult.textContent = '答對才算學會喔！';
   dom.learnCheckOptions.innerHTML = '';
 
   if (learnCheckPromptText !== lastSpokenLearnCheckPrompt) {
     lastSpokenLearnCheckPrompt = learnCheckPromptText;
-    speakLearnCheckPrompt(learnCheckState.targetWord);
+    speakLearnCheckPrompt(learnCheckState.targetLetter);
   }
 
   learnCheckState.options.forEach((optionLetter) => {
@@ -613,22 +613,22 @@ function renderLearnCheck() {
   });
 }
 
-function speakLearnCheckPrompt(targetWord) {
+function speakLearnCheckPrompt(targetLetter) {
   if (!('speechSynthesis' in window)) {
     showToast('這個瀏覽器不支援語音功能。');
     return;
   }
 
   const speechToken = beginSpeechPlayback();
-  const wordUtterance = new SpeechSynthesisUtterance(String(targetWord || ''));
-  wordUtterance.lang = 'en-US';
-  wordUtterance.rate = 0.9;
-  wordUtterance.pitch = 1.05;
+  const letterUtterance = new SpeechSynthesisUtterance(String(targetLetter || ''));
+  letterUtterance.lang = 'en-US';
+  letterUtterance.rate = 0.9;
+  letterUtterance.pitch = 1.05;
   if (preferredVoice) {
-    wordUtterance.voice = preferredVoice;
+    letterUtterance.voice = preferredVoice;
   }
 
-  const chineseUtterance = new SpeechSynthesisUtterance('的開頭字母是哪一個？');
+  const chineseUtterance = new SpeechSynthesisUtterance('字母是哪一個？');
   chineseUtterance.lang = 'zh-TW';
   chineseUtterance.rate = 1;
   chineseUtterance.pitch = 1;
@@ -636,14 +636,14 @@ function speakLearnCheckPrompt(targetWord) {
     chineseUtterance.voice = preferredZhVoice;
   }
 
-  wordUtterance.onend = () => {
+  letterUtterance.onend = () => {
     if (speechToken !== speechPlaybackToken) {
       return;
     }
     window.speechSynthesis.speak(chineseUtterance);
   };
 
-  window.speechSynthesis.speak(wordUtterance);
+  window.speechSynthesis.speak(letterUtterance);
 }
 
 function handleLearnCheckAnswer(optionLetter) {
@@ -654,7 +654,7 @@ function handleLearnCheckAnswer(optionLetter) {
   const isCorrect = optionLetter === learnCheckState.targetLetter;
   if (!isCorrect) {
     playWrongAnswerSound();
-    dom.learnCheckResult.textContent = `還差一點點，再試一次。${learnCheckState.targetWord} 的開頭不是 ${optionLetter}。`;
+    dom.learnCheckResult.textContent = `還差一點點，再試一次。這不是字母 ${learnCheckState.targetLetter}。`;
     return;
   }
 
@@ -1462,31 +1462,36 @@ function playWrongAnswerSound() {
     uiAudioContext = new AudioContextCtor();
   }
 
+  const playPattern = () => {
+    const now = uiAudioContext.currentTime + 0.01;
+    const tones = [300, 210];
+
+    tones.forEach((frequency, index) => {
+      const oscillator = uiAudioContext.createOscillator();
+      const gain = uiAudioContext.createGain();
+      const toneStart = now + index * 0.12;
+      const toneEnd = toneStart + 0.11;
+
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = frequency;
+      oscillator.connect(gain);
+      gain.connect(uiAudioContext.destination);
+
+      gain.gain.setValueAtTime(0.0001, toneStart);
+      gain.gain.exponentialRampToValueAtTime(0.34, toneStart + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+      oscillator.start(toneStart);
+      oscillator.stop(toneEnd);
+    });
+  };
+
   if (uiAudioContext.state === 'suspended') {
-    uiAudioContext.resume().catch(() => {});
+    uiAudioContext.resume().then(playPattern).catch(() => {});
+    return;
   }
 
-  const now = uiAudioContext.currentTime;
-  const tones = [280, 190];
-
-  tones.forEach((frequency, index) => {
-    const oscillator = uiAudioContext.createOscillator();
-    const gain = uiAudioContext.createGain();
-    const toneStart = now + index * 0.11;
-    const toneEnd = toneStart + 0.1;
-
-    oscillator.type = 'triangle';
-    oscillator.frequency.value = frequency;
-    oscillator.connect(gain);
-    gain.connect(uiAudioContext.destination);
-
-    gain.gain.setValueAtTime(0.0001, toneStart);
-    gain.gain.exponentialRampToValueAtTime(0.22, toneStart + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
-
-    oscillator.start(toneStart);
-    oscillator.stop(toneEnd);
-  });
+  playPattern();
 }
 
 function burstStars() {
