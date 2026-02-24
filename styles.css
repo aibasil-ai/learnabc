@@ -139,7 +139,7 @@ h1 {
 
 .letter-display {
   font-family: 'Fredoka', sans-serif;
-  font-size: clamp(4.2rem, 16vw, 7rem);
+  font-size: clamp(4.9rem, 18vw, 8rem);
   line-height: 1;
   color: #3e2f93;
   text-shadow: 0 8px 0 rgba(255, 255, 255, 0.65);
@@ -631,7 +631,7 @@ h1 {
   }
 
   .letter-display {
-    font-size: clamp(2.5rem, 11vw, 3.4rem);
+    font-size: clamp(3.2rem, 15vw, 4.9rem);
   }
 
   .emoji-display {
