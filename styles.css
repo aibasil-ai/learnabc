@@ -408,9 +408,9 @@ h1 {
 }
 
 .video-shell.portrait.mobile-landscape-playback {
-  width: 100%;
-  margin: 0;
-  aspect-ratio: 16 / 9;
+  width: min(300px, 78vw);
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
 }
 
 .video-shell.portrait.mobile-landscape-playback #youtube-player,
@@ -418,8 +418,8 @@ h1 {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 56.25%;
-  height: 177.78%;
+  width: 177.78%;
+  height: 56.25%;
   transform: translate(-50%, -50%) rotate(90deg);
   transform-origin: center;
 }
