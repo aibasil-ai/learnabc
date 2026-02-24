@@ -402,15 +402,9 @@ h1 {
 }
 
 .video-shell.portrait {
-  width: min(320px, 100%);
+  width: min(300px, 78vw);
   margin: 0 auto;
   aspect-ratio: 9 / 16;
-}
-
-.video-shell.portrait.mobile-landscape-playback {
-  width: 100%;
-  margin: 0;
-  aspect-ratio: 16 / 9;
 }
 
 #youtube-player,
@@ -673,20 +667,60 @@ h1 {
   }
 
   .progress-card {
-    gap: 8px;
+    gap: 10px;
+    grid-template-rows: auto auto auto auto 1fr auto;
+    align-content: stretch;
+    min-height: 0;
+  }
+
+  .progress-head {
+    align-items: start;
+  }
+
+  .progress-head h2 {
+    font-size: 1.18rem;
+    line-height: 1.1;
+  }
+
+  #score-text {
+    font-size: 1rem;
+  }
+
+  .meter-wrap {
+    height: 22px;
+  }
+
+  #progress-text {
+    font-size: 1rem;
+    font-weight: 700;
   }
 
   .reward-status {
-    font-size: 0.95rem;
+    font-size: 0.98rem;
+    line-height: 1.35;
+    background: rgba(91, 76, 199, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
   }
 
   .star-strip {
-    min-height: 24px;
-    gap: 4px;
+    min-height: 0;
+    gap: 6px;
+    align-content: start;
+    padding: 8px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.72);
+    overflow: auto;
   }
 
   .star {
+    font-size: 1.18rem;
+  }
+
+  #manual-reward-btn {
+    min-height: 52px;
     font-size: 1rem;
+    font-weight: 700;
   }
 
   .alphabet-card {
@@ -780,6 +814,10 @@ h1 {
     width: 100%;
     min-width: 0;
     font-size: 1.12rem;
+  }
+
+  .video-shell.portrait {
+    width: min(260px, 72vw);
   }
 
   .learn-check-modal .quiz-options {
