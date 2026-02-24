@@ -41,10 +41,12 @@ let pendingRewardResume = false;
 let pinPurpose = 'parent';
 let rewardLockHoldTimerId = null;
 let suppressNextRewardLockClick = false;
+let rewardLockActivePointerId = null;
 let currentLetterAudioProgress = { letter: false, word: false };
 let lastSpokenQuizPrompt = '';
 let lastSpokenLearnCheckPrompt = '';
 let forceSpeakQuizPrompt = false;
+let speechPlaybackToken = 0;
 
 let youtubeReadyResolver = null;
 const youtubeReadyPromise = new Promise((resolve) => {
@@ -183,12 +185,15 @@ function bindEvents() {
   dom.resumeRewardBtn.addEventListener('click', continuePendingRewardPlayback);
   dom.toggleRewardLockBtn.addEventListener('click', handleRewardLockButtonClick);
   dom.toggleRewardLockBtn.addEventListener('pointerdown', handleRewardLockPointerDown);
-  dom.toggleRewardLockBtn.addEventListener('pointerup', cancelRewardLockHold);
-  dom.toggleRewardLockBtn.addEventListener('pointerleave', cancelRewardLockHold);
-  dom.toggleRewardLockBtn.addEventListener('pointercancel', cancelRewardLockHold);
+  dom.toggleRewardLockBtn.addEventListener('pointerup', handleRewardLockPointerUp);
+  dom.toggleRewardLockBtn.addEventListener('pointercancel', handleRewardLockPointerCancel);
   dom.dockButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      activeMobilePanel = button.dataset.panelTarget || 'learn';
+      const nextPanel = button.dataset.panelTarget || 'learn';
+      if (nextPanel !== activeMobilePanel) {
+        stopSpeech();
+      }
+      activeMobilePanel = nextPanel;
       if (activeMobilePanel === 'quiz') {
         forceSpeakQuizPrompt = true;
       }
@@ -199,6 +204,12 @@ function bindEvents() {
     });
   });
   window.addEventListener('resize', renderMobilePanels);
+  window.addEventListener('pagehide', stopSpeech);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopSpeech();
+    }
+  });
 
   window.addEventListener(
     'keydown',
@@ -244,6 +255,7 @@ function speakText(text, options = {}) {
     return;
   }
 
+  beginSpeechPlayback();
   const utterance = new SpeechSynthesisUtterance(text);
   const targetLang = options.lang || 'en-US';
   utterance.lang = targetLang;
@@ -256,8 +268,26 @@ function speakText(text, options = {}) {
     utterance.voice = preferredVoice;
   }
 
-  window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
+}
+
+function beginSpeechPlayback() {
+  if (!('speechSynthesis' in window)) {
+    return speechPlaybackToken;
+  }
+
+  speechPlaybackToken += 1;
+  window.speechSynthesis.cancel();
+  return speechPlaybackToken;
+}
+
+function stopSpeech() {
+  if (!('speechSynthesis' in window)) {
+    return;
+  }
+
+  speechPlaybackToken += 1;
+  window.speechSynthesis.cancel();
 }
 
 function buildAlphabetGrid() {
@@ -274,6 +304,9 @@ function buildAlphabetGrid() {
       selectLetterByIndex(index);
 
       if (window.matchMedia('(max-width: 980px)').matches) {
+        if (activeMobilePanel !== 'learn') {
+          stopSpeech();
+        }
         activeMobilePanel = 'learn';
         renderMobilePanels();
       }
@@ -454,6 +487,7 @@ function speakQuizPrompt(targetWord) {
     return;
   }
 
+  const speechToken = beginSpeechPlayback();
   const wordUtterance = new SpeechSynthesisUtterance(String(targetWord || ''));
   wordUtterance.lang = 'en-US';
   wordUtterance.rate = 0.9;
@@ -471,10 +505,12 @@ function speakQuizPrompt(targetWord) {
   }
 
   wordUtterance.onend = () => {
+    if (speechToken !== speechPlaybackToken) {
+      return;
+    }
     window.speechSynthesis.speak(chineseUtterance);
   };
 
-  window.speechSynthesis.cancel();
   window.speechSynthesis.speak(wordUtterance);
 }
 
@@ -573,6 +609,7 @@ function speakLearnCheckPrompt(targetWord) {
     return;
   }
 
+  const speechToken = beginSpeechPlayback();
   const wordUtterance = new SpeechSynthesisUtterance(String(targetWord || ''));
   wordUtterance.lang = 'en-US';
   wordUtterance.rate = 0.9;
@@ -590,10 +627,12 @@ function speakLearnCheckPrompt(targetWord) {
   }
 
   wordUtterance.onend = () => {
+    if (speechToken !== speechPlaybackToken) {
+      return;
+    }
     window.speechSynthesis.speak(chineseUtterance);
   };
 
-  window.speechSynthesis.cancel();
   window.speechSynthesis.speak(wordUtterance);
 }
 
@@ -643,6 +682,7 @@ async function startRewardSession(options = {}) {
   if ((isRewardPlaying && !isResume) || (!state.settings.rewardEnabled && !isResume)) {
     return;
   }
+  stopSpeech();
 
   if (!isResume) {
     const status = getRewardStatus(state);
@@ -1059,33 +1099,75 @@ function handleRewardLockButtonClick(event) {
   showToast('請長按 2 秒再解除鎖定。');
 }
 
-function handleRewardLockPointerDown() {
+function handleRewardLockPointerDown(event) {
   if (!isRewardPlaying || rewardControlsUnlocked) {
     return;
   }
 
   cancelRewardLockHold();
+  if (typeof event.pointerId === 'number') {
+    rewardLockActivePointerId = event.pointerId;
+    try {
+      dom.toggleRewardLockBtn.setPointerCapture(event.pointerId);
+    } catch (_error) {
+      rewardLockActivePointerId = null;
+    }
+  }
   dom.toggleRewardLockBtn.classList.add('pressing');
   renderRewardLockUI();
 
   rewardLockHoldTimerId = setTimeout(() => {
     rewardLockHoldTimerId = null;
     dom.toggleRewardLockBtn.classList.remove('pressing');
+    releaseRewardLockPointer();
     renderRewardLockUI();
     suppressNextRewardLockClick = true;
     requestToggleRewardLock();
   }, 2000);
 }
 
-function cancelRewardLockHold() {
+function handleRewardLockPointerUp(event) {
+  cancelRewardLockHold(event.pointerId);
+}
+
+function handleRewardLockPointerCancel(event) {
+  cancelRewardLockHold(event.pointerId);
+}
+
+function cancelRewardLockHold(pointerId = null) {
+  if (
+    pointerId !== null &&
+    rewardLockActivePointerId !== null &&
+    pointerId !== rewardLockActivePointerId
+  ) {
+    return;
+  }
+
   if (rewardLockHoldTimerId) {
     clearTimeout(rewardLockHoldTimerId);
     rewardLockHoldTimerId = null;
   }
 
+  releaseRewardLockPointer();
   if (dom.toggleRewardLockBtn.classList.contains('pressing')) {
     dom.toggleRewardLockBtn.classList.remove('pressing');
     renderRewardLockUI();
+  }
+}
+
+function releaseRewardLockPointer() {
+  if (rewardLockActivePointerId === null) {
+    return;
+  }
+
+  try {
+    if (dom.toggleRewardLockBtn.hasPointerCapture(rewardLockActivePointerId)) {
+      dom.toggleRewardLockBtn.releasePointerCapture(rewardLockActivePointerId);
+    }
+  } catch (_error) {
+    // ignore
+  } finally {
+    rewardLockActivePointerId = null;
   }
 }
 
@@ -1096,6 +1178,7 @@ function updateCountdownLabel() {
 }
 
 function openPinOverlay(mode = 'parent') {
+  stopSpeech();
   pinPurpose = mode;
   dom.pinOverlay.classList.remove('hidden');
   dom.pinInput.value = '';
@@ -1130,6 +1213,7 @@ function verifyPin() {
 }
 
 function openParentOverlay() {
+  stopSpeech();
   dom.parentOverlay.classList.remove('hidden');
   dom.lettersPerRewardInput.value = state.settings.lettersPerReward;
   dom.rewardSecondsInput.value = state.settings.rewardSeconds;
