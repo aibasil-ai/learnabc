@@ -164,7 +164,9 @@ h1 {
 }
 
 .word-display {
-  font-size: 2rem;
+  font-size: clamp(2.15rem, 3.6vw, 2.8rem);
+  line-height: 1.06;
+  letter-spacing: 0.01em;
   color: #ff7f45;
 }
 
@@ -660,18 +662,18 @@ h1 {
   }
 
   .hero-card {
-    grid-template-rows: 1fr auto;
-    gap: 6px;
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 8px;
   }
 
   .hero-main {
-    height: 100%;
-    min-height: 0;
-    padding: 6px 10px 8px;
+    min-height: min(56dvh, 460px);
+    padding: 6px 10px;
     display: grid;
     align-content: start;
     justify-items: center;
-    gap: 4px;
+    gap: 3px;
   }
 
   .label {
@@ -691,7 +693,9 @@ h1 {
   }
 
   .word-display {
-    font-size: clamp(1.35rem, 6.2vw, 2rem);
+    font-size: clamp(2rem, 9vw, 2.9rem);
+    line-height: 1.04;
+    margin-top: 2px;
   }
 
   .action-btn,

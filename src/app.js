@@ -1591,32 +1591,50 @@ function playCorrectAnswerSound() {
 
   const playPattern = () => {
     const now = uiAudioContext.currentTime + 0.01;
-    const tones = [540, 680, 840];
+    const fanfareNotes = [660, 784, 988, 1318];
 
-    tones.forEach((frequency, index) => {
-      const oscillator = uiAudioContext.createOscillator();
-      const supportOscillator = uiAudioContext.createOscillator();
+    fanfareNotes.forEach((frequency, index) => {
+      const toneStart = now + index * 0.085;
+      const toneEnd = toneStart + 0.16;
+      const baseOsc = uiAudioContext.createOscillator();
+      const sparkleOsc = uiAudioContext.createOscillator();
       const gain = uiAudioContext.createGain();
-      const toneStart = now + index * 0.11;
-      const toneEnd = toneStart + 0.14;
 
-      oscillator.type = 'sine';
-      oscillator.frequency.value = frequency;
-      supportOscillator.type = 'triangle';
-      supportOscillator.frequency.value = frequency * 2;
-      oscillator.connect(gain);
-      supportOscillator.connect(gain);
+      baseOsc.type = 'triangle';
+      sparkleOsc.type = 'sine';
+      baseOsc.frequency.setValueAtTime(frequency, toneStart);
+      sparkleOsc.frequency.setValueAtTime(frequency * 2, toneStart);
+      sparkleOsc.frequency.exponentialRampToValueAtTime(frequency * 2.8, toneEnd);
+
+      baseOsc.connect(gain);
+      sparkleOsc.connect(gain);
       gain.connect(uiAudioContext.destination);
 
       gain.gain.setValueAtTime(0.0001, toneStart);
-      gain.gain.exponentialRampToValueAtTime(0.36, toneStart + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.42, toneStart + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.12, toneStart + 0.085);
       gain.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
 
-      oscillator.start(toneStart);
-      oscillator.stop(toneEnd);
-      supportOscillator.start(toneStart);
-      supportOscillator.stop(toneEnd);
+      baseOsc.start(toneStart);
+      baseOsc.stop(toneEnd);
+      sparkleOsc.start(toneStart);
+      sparkleOsc.stop(toneEnd);
     });
+
+    const sweepStart = now + fanfareNotes.length * 0.085;
+    const sweepEnd = sweepStart + 0.28;
+    const sweepOsc = uiAudioContext.createOscillator();
+    const sweepGain = uiAudioContext.createGain();
+    sweepOsc.type = 'sawtooth';
+    sweepOsc.frequency.setValueAtTime(900, sweepStart);
+    sweepOsc.frequency.exponentialRampToValueAtTime(1800, sweepEnd);
+    sweepOsc.connect(sweepGain);
+    sweepGain.connect(uiAudioContext.destination);
+    sweepGain.gain.setValueAtTime(0.0001, sweepStart);
+    sweepGain.gain.exponentialRampToValueAtTime(0.2, sweepStart + 0.03);
+    sweepGain.gain.exponentialRampToValueAtTime(0.0001, sweepEnd);
+    sweepOsc.start(sweepStart);
+    sweepOsc.stop(sweepEnd);
   };
 
   if (uiAudioContext.state === 'suspended') {
