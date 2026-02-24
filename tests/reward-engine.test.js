@@ -6,7 +6,9 @@ import {
   createInitialState,
   markLetterLearned,
   getRewardStatus,
-  consumeRewardSession
+  consumeRewardSession,
+  normalizeRewardSessions,
+  updateSettings
 } from '../src/reward-engine.js';
 
 test('每學滿 5 個不同字母會解鎖 1 次獎勵', () => {
@@ -58,6 +60,33 @@ test('可依家長設定調整門檻', () => {
   const status = getRewardStatus(state);
   assert.equal(status.availableSessions, 1);
   assert.equal(status.nextMilestoneAt, 6);
+});
+
+test('調整獎勵門檻後會校正已觀看次數，後續仍可再次解鎖', () => {
+  let state = createInitialState(DEFAULT_SETTINGS);
+  ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'].forEach((letter) => {
+    state = markLetterLearned(state, letter);
+  });
+
+  state = consumeRewardSession(state);
+  state = consumeRewardSession(state);
+  let status = getRewardStatus(state);
+  assert.equal(status.watchedSessions, 2);
+  assert.equal(status.availableSessions, 0);
+
+  state = updateSettings(state, { lettersPerReward: 10 });
+  state = normalizeRewardSessions(state);
+  status = getRewardStatus(state);
+  assert.equal(status.watchedSessions, 1);
+  assert.equal(status.availableSessions, 0);
+
+  ['K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'].forEach((letter) => {
+    state = markLetterLearned(state, letter);
+  });
+  status = getRewardStatus(state);
+  assert.equal(status.earnedSessions, 2);
+  assert.equal(status.watchedSessions, 1);
+  assert.equal(status.availableSessions, 1);
 });
 
 test('建立初始狀態時可保留影片方向設定', () => {

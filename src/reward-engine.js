@@ -62,7 +62,7 @@ export function consumeRewardSession(state) {
 
   return {
     ...state,
-    watchedSessions: state.watchedSessions + 1,
+    watchedSessions: status.watchedSessions + 1,
     streak: 0
   };
 }
@@ -71,7 +71,8 @@ export function getRewardStatus(state) {
   const learnedCount = state.learnedLetters.length;
   const lettersPerReward = Math.max(1, Number(state.settings.lettersPerReward) || 1);
   const earnedSessions = Math.floor(learnedCount / lettersPerReward);
-  const watchedSessions = Math.max(0, Number(state.watchedSessions) || 0);
+  const watchedSessionsRaw = Math.max(0, Number(state.watchedSessions) || 0);
+  const watchedSessions = Math.min(watchedSessionsRaw, earnedSessions);
   const availableSessions = Math.max(0, earnedSessions - watchedSessions);
   const progressToNextReward = learnedCount % lettersPerReward;
   const nextMilestoneAt = (Math.floor(learnedCount / lettersPerReward) + 1) * lettersPerReward;
@@ -84,6 +85,18 @@ export function getRewardStatus(state) {
     availableSessions,
     progressToNextReward,
     nextMilestoneAt
+  };
+}
+
+export function normalizeRewardSessions(state) {
+  const status = getRewardStatus(state);
+  if (status.watchedSessions === state.watchedSessions) {
+    return state;
+  }
+
+  return {
+    ...state,
+    watchedSessions: status.watchedSessions
   };
 }
 

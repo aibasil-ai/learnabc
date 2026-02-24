@@ -5,6 +5,7 @@ import {
   createInitialState,
   getRewardStatus,
   markLetterLearned,
+  normalizeRewardSessions,
   resetProgress,
   updateSettings
 } from './reward-engine.js';
@@ -48,6 +49,7 @@ let lastSpokenLearnCheckPrompt = '';
 let forceSpeakQuizPrompt = false;
 let speechPlaybackToken = 0;
 let uiAudioContext = null;
+let fullscreenSwitching = false;
 
 let youtubeReadyResolver = null;
 const youtubeReadyPromise = new Promise((resolve) => {
@@ -221,6 +223,7 @@ function bindEvents() {
   window.addEventListener('pagehide', stopSpeech);
   document.addEventListener('fullscreenchange', updateFullscreenButtonUI);
   document.addEventListener('webkitfullscreenchange', updateFullscreenButtonUI);
+  document.addEventListener('MSFullscreenChange', updateFullscreenButtonUI);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       stopSpeech();
@@ -1318,6 +1321,7 @@ function saveParentSettings() {
     parentPin,
     rewardEnabled: dom.rewardEnabledInput.checked
   });
+  state = normalizeRewardSessions(state);
   state = {
     ...state,
     rewardPlayback: normalizeRewardPlayback(
@@ -1366,7 +1370,7 @@ function loadState() {
     const rewardPlayback = normalizeRewardPlayback(parsed.rewardPlayback, settings.youtubeVideoId);
     const activeReward = normalizeActiveReward(parsed.activeReward);
 
-    return {
+    return normalizeRewardSessions({
       ...initial,
       learnedLetters,
       watchedSessions: Math.max(0, Number(parsed.watchedSessions) || 0),
@@ -1375,7 +1379,7 @@ function loadState() {
       lastLearnedLetter: getLetterItem(parsed.lastLearnedLetter) ? parsed.lastLearnedLetter : null,
       rewardPlayback,
       activeReward
-    };
+    });
   } catch (_error) {
     return createInitialState(DEFAULT_SETTINGS);
   }
@@ -1430,42 +1434,82 @@ function updateLearnedButtonState() {
   dom.learnedBtn.title = ready ? '我學會了' : '請先播放字母與單字';
 }
 
-function isFullscreenActive() {
-  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-}
-
-function isFullscreenSupported() {
+function getFullscreenRequestMethod() {
   const root = document.documentElement;
-  return Boolean(
-    document.fullscreenEnabled ||
-      document.webkitFullscreenEnabled ||
-      root.requestFullscreen ||
-      root.webkitRequestFullscreen
+  return (
+    root.requestFullscreen ||
+    root.webkitRequestFullscreen ||
+    root.webkitRequestFullScreen ||
+    root.msRequestFullscreen ||
+    null
   );
 }
 
+function getFullscreenExitMethod() {
+  return (
+    document.exitFullscreen ||
+    document.webkitExitFullscreen ||
+    document.webkitCancelFullScreen ||
+    document.msExitFullscreen ||
+    null
+  );
+}
+
+function isFullscreenActive() {
+  return Boolean(
+    document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.msFullscreenElement ||
+      document.webkitIsFullScreen
+  );
+}
+
+function isFullscreenSupported() {
+  const hasRequest = Boolean(getFullscreenRequestMethod());
+  const hasExit = Boolean(getFullscreenExitMethod());
+  return hasRequest || hasExit;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
 async function toggleFullscreen() {
+  if (fullscreenSwitching) {
+    return;
+  }
   if (!isFullscreenSupported()) {
     showToast('此裝置或瀏覽器目前不支援全螢幕。');
     return;
   }
 
   const root = document.documentElement;
+  const requestMethod = getFullscreenRequestMethod();
+  const exitMethod = getFullscreenExitMethod();
+  const active = isFullscreenActive();
+
+  fullscreenSwitching = true;
   try {
-    if (isFullscreenActive()) {
-      if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
+    if (active) {
+      if (!exitMethod) {
+        showToast('目前裝置不支援退出全螢幕。');
+        return;
       }
-    } else if (root.requestFullscreen) {
-      await root.requestFullscreen();
-    } else if (root.webkitRequestFullscreen) {
-      root.webkitRequestFullscreen();
+      await Promise.resolve(exitMethod.call(document));
+    } else {
+      if (!requestMethod) {
+        showToast('目前裝置不支援進入全螢幕。');
+        return;
+      }
+      await Promise.resolve(requestMethod.call(root));
     }
   } catch (_error) {
     showToast('全螢幕切換失敗，請再試一次。');
   } finally {
+    await wait(120);
+    fullscreenSwitching = false;
     updateFullscreenButtonUI();
   }
 }
