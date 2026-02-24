@@ -92,7 +92,7 @@
         <h2>太棒了！獎勵時間</h2>
         <p id="reward-countdown">03:00</p>
         <p>影片會自動播放與結束，播放控制已鎖定。</p>
-        <div class="video-shell">
+        <div id="video-shell" class="video-shell">
           <div id="youtube-player"></div>
           <div id="video-lock-layer" class="video-lock-layer" aria-hidden="true"></div>
         </div>
@@ -141,6 +141,12 @@
 
         <label for="youtube-input">YouTube 影片連結或影片 ID</label>
         <input id="youtube-input" type="text" />
+
+        <label for="reward-orientation">影片顯示方向</label>
+        <select id="reward-orientation">
+          <option value="landscape">橫向（16:9）</option>
+          <option value="portrait">直向（9:16）</option>
+        </select>
 
         <label for="new-pin">變更家長 PIN（4-8 碼）</label>
         <input id="new-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" />

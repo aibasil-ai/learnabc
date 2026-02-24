@@ -87,6 +87,7 @@ const dom = {
   nextQuizBtn: document.getElementById('next-quiz-btn'),
   rewardOverlay: document.getElementById('reward-overlay'),
   rewardCountdown: document.getElementById('reward-countdown'),
+  videoShell: document.getElementById('video-shell'),
   videoLockLayer: document.getElementById('video-lock-layer'),
   resumeRewardBtn: document.getElementById('resume-reward-btn'),
   toggleRewardLockBtn: document.getElementById('toggle-reward-lock-btn'),
@@ -100,6 +101,7 @@ const dom = {
   lettersPerRewardInput: document.getElementById('letters-per-reward'),
   rewardSecondsInput: document.getElementById('reward-seconds'),
   youtubeInput: document.getElementById('youtube-input'),
+  rewardOrientationInput: document.getElementById('reward-orientation'),
   newPinInput: document.getElementById('new-pin'),
   rewardEnabledInput: document.getElementById('reward-enabled'),
   saveSettingsBtn: document.getElementById('save-settings-btn'),
@@ -120,6 +122,7 @@ function init() {
   setupSpeechVoices();
   buildAlphabetGrid();
   setupNextQuizQuestion();
+  applyRewardVideoOrientation();
   renderAll();
   renderMobilePanels();
   maybeResumeActiveReward();
@@ -572,6 +575,7 @@ function openLearnCheck(item) {
 }
 
 function closeLearnCheck() {
+  stopSpeech();
   dom.learnCheckOverlay.classList.add('hidden');
   learnCheckState = null;
   lastSpokenLearnCheckPrompt = '';
@@ -697,6 +701,7 @@ async function startRewardSession(options = {}) {
     1,
     600
   );
+  applyRewardVideoOrientation();
   isRewardPlaying = true;
   rewardControlsUnlocked = false;
   pendingRewardResume = Boolean(options.requireManualStart);
@@ -1218,6 +1223,7 @@ function openParentOverlay() {
   dom.lettersPerRewardInput.value = state.settings.lettersPerReward;
   dom.rewardSecondsInput.value = state.settings.rewardSeconds;
   dom.youtubeInput.value = state.settings.youtubeVideoId;
+  dom.rewardOrientationInput.value = normalizeRewardOrientation(state.settings.rewardOrientation);
   dom.newPinInput.value = '';
   dom.rewardEnabledInput.checked = Boolean(state.settings.rewardEnabled);
 }
@@ -1231,6 +1237,7 @@ function saveParentSettings() {
   const lettersPerReward = clamp(Number(dom.lettersPerRewardInput.value) || 5, 1, 26);
   const rewardSeconds = clamp(Number(dom.rewardSecondsInput.value) || 180, 10, 600);
   const youtubeInput = dom.youtubeInput.value.trim();
+  const rewardOrientation = normalizeRewardOrientation(dom.rewardOrientationInput.value);
   const parsedVideoId = parseYouTubeVideoId(youtubeInput);
 
   if (!parsedVideoId) {
@@ -1253,6 +1260,7 @@ function saveParentSettings() {
     lettersPerReward,
     rewardSeconds,
     youtubeVideoId: parsedVideoId,
+    rewardOrientation,
     parentPin,
     rewardEnabled: dom.rewardEnabledInput.checked
   });
@@ -1265,6 +1273,7 @@ function saveParentSettings() {
   };
 
   persistState();
+  applyRewardVideoOrientation();
   renderProgress();
   closeParentOverlay();
 
@@ -1333,15 +1342,30 @@ function normalizeSettings(settings) {
 
   const pinRaw = String(settings.parentPin || DEFAULT_SETTINGS.parentPin);
   const parentPin = /^\d{4,8}$/.test(pinRaw) ? pinRaw : DEFAULT_SETTINGS.parentPin;
+  const rewardOrientation = normalizeRewardOrientation(settings.rewardOrientation);
 
   return {
     ...DEFAULT_SETTINGS,
     lettersPerReward,
     rewardSeconds,
     youtubeVideoId,
+    rewardOrientation,
     parentPin,
     rewardEnabled: settings.rewardEnabled !== false
   };
+}
+
+function normalizeRewardOrientation(value) {
+  return value === 'portrait' ? 'portrait' : 'landscape';
+}
+
+function applyRewardVideoOrientation() {
+  if (!dom.videoShell) {
+    return;
+  }
+
+  const orientation = normalizeRewardOrientation(state.settings.rewardOrientation);
+  dom.videoShell.classList.toggle('portrait', orientation === 'portrait');
 }
 
 function updateLearnedButtonState() {

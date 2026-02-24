@@ -59,3 +59,15 @@ test('可依家長設定調整門檻', () => {
   assert.equal(status.availableSessions, 1);
   assert.equal(status.nextMilestoneAt, 6);
 });
+
+test('建立初始狀態時可保留影片方向設定', () => {
+  const portraitSettings = {
+    ...DEFAULT_SETTINGS,
+    rewardOrientation: 'portrait'
+  };
+  const portraitState = createInitialState(portraitSettings);
+  const defaultState = createInitialState(DEFAULT_SETTINGS);
+
+  assert.equal(portraitState.settings.rewardOrientation, 'portrait');
+  assert.equal(defaultState.settings.rewardOrientation, 'landscape');
+});

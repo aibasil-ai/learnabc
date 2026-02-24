@@ -401,6 +401,12 @@ h1 {
   background: #111;
 }
 
+.video-shell.portrait {
+  width: min(320px, 100%);
+  margin: 0 auto;
+  aspect-ratio: 9 / 16;
+}
+
 #youtube-player,
 #youtube-player iframe {
   width: 100%;
@@ -444,6 +450,7 @@ h1 {
 .parent-modal input[type='text'],
 .parent-modal input[type='password'],
 .parent-modal input[type='number'],
+.parent-modal select,
 #pin-input {
   width: 100%;
   border: 2px solid rgba(85, 76, 139, 0.25);
