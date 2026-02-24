@@ -139,7 +139,7 @@ h1 {
 
 .letter-display {
   font-family: 'Fredoka', sans-serif;
-  font-size: clamp(4.9rem, 18vw, 8rem);
+  font-size: clamp(5.6rem, 20vw, 9rem);
   line-height: 1;
   color: #3e2f93;
   text-shadow: 0 8px 0 rgba(255, 255, 255, 0.65);
@@ -613,17 +613,17 @@ h1 {
 
   .hero-card {
     grid-template-rows: 1fr auto;
-    gap: 8px;
+    gap: 6px;
   }
 
   .hero-main {
     height: 100%;
     min-height: 0;
-    padding: 10px 10px 8px;
+    padding: 6px 10px 8px;
     display: grid;
-    align-content: center;
+    align-content: start;
     justify-items: center;
-    gap: 6px;
+    gap: 4px;
   }
 
   .label {
@@ -631,7 +631,7 @@ h1 {
   }
 
   .letter-display {
-    font-size: clamp(3.2rem, 15vw, 4.9rem);
+    font-size: clamp(4rem, 18vw, 6rem);
   }
 
   .emoji-display {
