@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">ABC 冒險樂園 Favicon</title>
+  <desc id="desc">彩色圓角背景與 ABC 字樣</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffbe5c" />
+      <stop offset="100%" stop-color="#5b4cc7" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)" />
+  <text
+    x="32"
+    y="40"
+    text-anchor="middle"
+    font-size="24"
+    font-family="Fredoka, Baloo 2, Arial, sans-serif"
+    font-weight="700"
+    fill="#ffffff"
+  >
+    ABC
+  </text>
+</svg>
