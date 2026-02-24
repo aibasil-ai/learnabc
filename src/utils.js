@@ -106,6 +106,23 @@ export function resolveRewardStart(rewardPlayback, candidates) {
   };
 }
 
+export function buildQuizPrompt(targetWord) {
+  return `「${String(targetWord || '')}」是由哪個英文字母開頭？`;
+}
+
+export function shouldSpeakPrompt(currentPrompt, lastPrompt, forceSpeak = false) {
+  const nextPrompt = String(currentPrompt || '');
+  if (!nextPrompt) {
+    return false;
+  }
+
+  if (forceSpeak) {
+    return true;
+  }
+
+  return nextPrompt !== String(lastPrompt || '');
+}
+
 function isYouTubeId(value) {
   return typeof value === 'string' && /^[a-zA-Z0-9_-]{11}$/.test(value);
 }

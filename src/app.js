@@ -9,12 +9,14 @@ import {
   updateSettings
 } from './reward-engine.js';
 import {
+  buildQuizPrompt,
   buildRewardVideoCandidates,
   clamp,
   getYouTubeErrorMessage,
   normalizeRewardPlayback,
   parseYouTubeVideoId,
   resolveRewardStart,
+  shouldSpeakPrompt,
   shuffleArray
 } from './utils.js';
 
@@ -42,6 +44,7 @@ let suppressNextRewardLockClick = false;
 let currentLetterAudioProgress = { letter: false, word: false };
 let lastSpokenQuizPrompt = '';
 let lastSpokenLearnCheckPrompt = '';
+let forceSpeakQuizPrompt = false;
 
 let youtubeReadyResolver = null;
 const youtubeReadyPromise = new Promise((resolve) => {
@@ -186,7 +189,13 @@ function bindEvents() {
   dom.dockButtons.forEach((button) => {
     button.addEventListener('click', () => {
       activeMobilePanel = button.dataset.panelTarget || 'learn';
+      if (activeMobilePanel === 'quiz') {
+        forceSpeakQuizPrompt = true;
+      }
       renderMobilePanels();
+      if (activeMobilePanel === 'quiz') {
+        renderQuiz();
+      }
     });
   });
   window.addEventListener('resize', renderMobilePanels);
@@ -395,6 +404,7 @@ function setupNextQuizQuestion() {
     selected: null,
     isCorrect: false
   };
+  forceSpeakQuizPrompt = true;
 }
 
 function renderQuiz() {
@@ -402,12 +412,13 @@ function renderQuiz() {
     return;
   }
 
-  const quizPromptText = `「${quizState.targetWord}」是由哪個英文字母開頭？`;
+  const quizPromptText = buildQuizPrompt(quizState.targetWord);
   dom.quizPrompt.textContent = quizPromptText;
-  if (quizPromptText !== lastSpokenQuizPrompt) {
+  if (shouldSpeakPrompt(quizPromptText, lastSpokenQuizPrompt, forceSpeakQuizPrompt)) {
     lastSpokenQuizPrompt = quizPromptText;
-    speakText(quizPromptText, { lang: 'zh-TW', rate: 1, pitch: 1 });
+    speakQuizPrompt(quizState.targetWord);
   }
+  forceSpeakQuizPrompt = false;
   dom.quizResult.textContent = quizState.answered
     ? quizState.isCorrect
       ? '答對了！你真厲害！'
@@ -435,6 +446,36 @@ function renderQuiz() {
 
     dom.quizOptions.appendChild(optionButton);
   });
+}
+
+function speakQuizPrompt(targetWord) {
+  if (!('speechSynthesis' in window)) {
+    showToast('這個瀏覽器不支援語音功能。');
+    return;
+  }
+
+  const wordUtterance = new SpeechSynthesisUtterance(String(targetWord || ''));
+  wordUtterance.lang = 'en-US';
+  wordUtterance.rate = 0.9;
+  wordUtterance.pitch = 1.05;
+  if (preferredVoice) {
+    wordUtterance.voice = preferredVoice;
+  }
+
+  const chineseUtterance = new SpeechSynthesisUtterance('是由哪個英文字母開頭？');
+  chineseUtterance.lang = 'zh-TW';
+  chineseUtterance.rate = 1;
+  chineseUtterance.pitch = 1;
+  if (preferredZhVoice) {
+    chineseUtterance.voice = preferredZhVoice;
+  }
+
+  wordUtterance.onend = () => {
+    window.speechSynthesis.speak(chineseUtterance);
+  };
+
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(wordUtterance);
 }
 
 function answerQuiz(letter) {

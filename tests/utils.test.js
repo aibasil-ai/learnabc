@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildQuizPrompt,
   buildRewardVideoCandidates,
   getYouTubeErrorMessage,
   normalizeRewardPlayback,
   parseYouTubeVideoId,
-  resolveRewardStart
+  resolveRewardStart,
+  shouldSpeakPrompt
 } from '../src/utils.js';
 
 test('可解析完整 youtube watch URL', () => {
@@ -60,4 +62,29 @@ test('resolveRewardStart 會找出候選影片中的續播位置', () => {
   );
 
   assert.deepEqual(start, { index: 1, timeSeconds: 88 });
+});
+
+test('buildQuizPrompt 會產生測驗題目文字', () => {
+  assert.equal(buildQuizPrompt('Elephant'), '「Elephant」是由哪個英文字母開頭？');
+});
+
+test('shouldSpeakPrompt 在文字改變時回傳 true', () => {
+  assert.equal(
+    shouldSpeakPrompt('「Apple」是由哪個英文字母開頭？', '「Bear」是由哪個英文字母開頭？'),
+    true
+  );
+});
+
+test('shouldSpeakPrompt 在文字相同且未強制時回傳 false', () => {
+  assert.equal(
+    shouldSpeakPrompt('「Apple」是由哪個英文字母開頭？', '「Apple」是由哪個英文字母開頭？'),
+    false
+  );
+});
+
+test('shouldSpeakPrompt 在強制朗讀時回傳 true', () => {
+  assert.equal(
+    shouldSpeakPrompt('「Apple」是由哪個英文字母開頭？', '「Apple」是由哪個英文字母開頭？', true),
+    true
+  );
 });
