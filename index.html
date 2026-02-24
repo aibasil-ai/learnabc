@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ABC 冒險樂園</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Fredoka:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://www.youtube.com/iframe_api" async></script>
+  </head>
+  <body>
+    <div class="orb orb-a"></div>
+    <div class="orb orb-b"></div>
+    <div class="orb orb-c"></div>
+
+    <header class="top-bar">
+      <div>
+        <h1>ABC 冒險樂園</h1>
+      </div>
+      <button id="open-pin-btn" class="pill-btn parent-icon-btn" aria-label="家長專區" title="家長專區">
+        <span aria-hidden="true">🛡️</span>
+      </button>
+    </header>
+
+    <main class="layout">
+      <section class="card hero-card panel-card" data-panel="learn">
+        <div class="hero-main">
+          <p id="learned-badge" class="learned-badge hidden">已學習過</p>
+          <p class="label">今天要學的字母</p>
+          <div id="letter-display" class="letter-display">A</div>
+          <div id="emoji-display" class="emoji-display">🍎</div>
+          <p id="word-display" class="word-display">Apple</p>
+        </div>
+        <div class="hero-controls">
+          <button id="prev-letter-btn" class="action-btn icon-btn" aria-label="上一個" title="上一個">⏮</button>
+          <button id="next-letter-btn" class="action-btn icon-btn" aria-label="下一個" title="下一個">⏭</button>
+          <button id="speak-letter-btn" class="action-btn icon-btn" aria-label="播放字母" title="播放字母">🔤</button>
+          <button id="speak-word-btn" class="action-btn icon-btn" aria-label="播放單字" title="播放單字">🗣️</button>
+          <button id="learned-btn" class="action-btn primary icon-btn" aria-label="我學會了" title="我學會了">✅</button>
+        </div>
+      </section>
+
+      <section class="card progress-card panel-card" data-panel="progress">
+        <div class="progress-head">
+          <h2>學習進度</h2>
+          <p id="score-text">分數：0</p>
+        </div>
+        <div class="meter-wrap">
+          <div id="meter-fill" class="meter-fill"></div>
+        </div>
+        <p id="progress-text">0 / 26 字母</p>
+        <p id="reward-status" class="reward-status">再學 5 個字母可看 3 分鐘影片</p>
+        <div id="star-strip" class="star-strip"></div>
+        <button id="manual-reward-btn" class="action-btn" disabled>立即播放獎勵影片</button>
+      </section>
+
+      <section class="card alphabet-card panel-card" data-panel="alphabet">
+        <div class="card-title-row">
+          <h2>字母地圖</h2>
+          <p class="hint">點字母可快速切換</p>
+        </div>
+        <div id="alphabet-grid" class="alphabet-grid"></div>
+      </section>
+
+      <section class="card quiz-card panel-card" data-panel="quiz">
+        <div class="card-title-row">
+          <h2>小測驗</h2>
+          <button id="next-quiz-btn" class="pill-btn">下一題</button>
+        </div>
+        <p id="quiz-prompt" class="quiz-prompt"></p>
+        <div id="quiz-options" class="quiz-options"></div>
+        <p id="quiz-result" class="quiz-result"></p>
+      </section>
+    </main>
+
+    <nav id="mobile-dock" class="mobile-dock" aria-label="手機功能切換">
+      <button type="button" class="dock-btn active" data-panel-target="learn">學習</button>
+      <button type="button" class="dock-btn" data-panel-target="progress">進度</button>
+      <button type="button" class="dock-btn" data-panel-target="alphabet">字母</button>
+      <button type="button" class="dock-btn" data-panel-target="quiz">測驗</button>
+    </nav>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <section id="reward-overlay" class="overlay hidden" aria-live="polite">
+      <div class="overlay-card reward-modal">
+        <h2>太棒了！獎勵時間</h2>
+        <p id="reward-countdown">03:00</p>
+        <p>影片會自動播放與結束，播放控制已鎖定。</p>
+        <div class="video-shell">
+          <div id="youtube-player"></div>
+          <div id="video-lock-layer" class="video-lock-layer" aria-hidden="true"></div>
+        </div>
+        <div class="modal-row reward-action-row">
+          <button id="resume-reward-btn" class="action-btn primary hidden">繼續播放</button>
+          <button id="toggle-reward-lock-btn" class="action-btn">長按2秒解鎖</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pin-overlay" class="overlay hidden" aria-modal="true" role="dialog">
+      <div class="overlay-card">
+        <h2>家長 PIN 驗證</h2>
+        <label for="pin-input">請輸入 PIN</label>
+        <input id="pin-input" type="password" inputmode="numeric" maxlength="8" />
+        <div class="modal-row">
+          <button id="pin-cancel-btn" class="action-btn">取消</button>
+          <button id="pin-submit-btn" class="action-btn primary">進入設定</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="learn-check-overlay" class="overlay hidden" aria-modal="true" role="dialog">
+      <div class="overlay-card learn-check-modal">
+        <h2 id="learn-check-title">學會挑戰</h2>
+        <p id="learn-check-prompt" class="quiz-prompt"></p>
+        <div id="learn-check-options" class="quiz-options"></div>
+        <p id="learn-check-result" class="quiz-result"></p>
+        <div class="modal-row">
+          <button id="learn-check-cancel-btn" class="action-btn">稍後再挑戰</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="parent-overlay" class="overlay hidden" aria-modal="true" role="dialog">
+      <div class="overlay-card parent-modal">
+        <div class="card-title-row">
+          <h2>家長管理介面</h2>
+          <button id="parent-close-btn" class="pill-btn">關閉</button>
+        </div>
+        <label for="letters-per-reward">每幾個字母解鎖一次影片</label>
+        <input id="letters-per-reward" type="number" min="1" max="26" />
+
+        <label for="reward-seconds">每次影片秒數</label>
+        <input id="reward-seconds" type="number" min="10" max="600" step="10" />
+
+        <label for="youtube-input">YouTube 影片連結或影片 ID</label>
+        <input id="youtube-input" type="text" />
+
+        <label for="new-pin">變更家長 PIN（4-8 碼）</label>
+        <input id="new-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" />
+
+        <label class="check-row" for="reward-enabled">
+          <input id="reward-enabled" type="checkbox" />
+          啟用影片獎勵
+        </label>
+
+        <div class="modal-row">
+          <button id="save-settings-btn" class="action-btn primary">儲存設定</button>
+          <button id="reset-progress-btn" class="action-btn danger">重設學習進度</button>
+        </div>
+      </div>
+    </section>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
