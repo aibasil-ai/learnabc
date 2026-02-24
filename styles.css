@@ -490,6 +490,26 @@ h1 {
   font-size: 1rem;
 }
 
+#parent-overlay {
+  overflow-y: auto;
+}
+
+#parent-overlay .overlay-card.parent-modal {
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
+#reward-overlay {
+  overflow-y: auto;
+}
+
+#reward-overlay .overlay-card.reward-modal {
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+}
+
 .parent-modal input[type='text'],
 .parent-modal input[type='password'],
 .parent-modal input[type='number'],
