@@ -141,6 +141,8 @@ function init() {
   setupSpeechVoices();
   buildAlphabetGrid();
   setupNextQuizQuestion();
+  // 首次載入不要自動朗讀測驗題目，避免開啟頁面就發聲。
+  forceSpeakQuizPrompt = false;
   applyRewardVideoOrientation();
   renderAll();
   renderMobilePanels();
