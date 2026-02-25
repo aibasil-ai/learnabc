@@ -121,7 +121,7 @@ h1 {
   text-align: center;
   background: linear-gradient(145deg, rgba(255, 242, 179, 0.6), rgba(195, 252, 255, 0.4));
   border-radius: 20px;
-  padding: 20px;
+  padding: 20px 20px 86px;
 }
 
 .learned-badge {
@@ -170,10 +170,35 @@ h1 {
   color: #ff7f45;
 }
 
+.letter-step-controls {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.letter-step-controls .icon-btn {
+  pointer-events: auto;
+  min-width: 64px;
+  min-height: 54px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
 .hero-controls {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.hero-controls #learned-btn {
+  grid-column: 1 / -1;
 }
 
 .progress-card {
@@ -380,8 +405,8 @@ h1 {
 
 #speak-letter-btn,
 #speak-word-btn {
-  min-height: 54px;
-  font-size: 1.5rem;
+  min-height: 66px;
+  font-size: 1.95rem;
 }
 
 .overlay {
@@ -414,9 +439,8 @@ h1 {
 
 #reward-overlay {
   overflow-y: auto;
-  place-items: start center;
-  padding-top: 20px;
-  padding-bottom: 20px;
+  place-items: center;
+  padding: 20px;
 }
 
 #reward-overlay .overlay-card.reward-modal {
@@ -708,11 +732,23 @@ h1 {
 
   .hero-main {
     min-height: min(56dvh, 460px);
-    padding: 6px 10px;
+    padding: 6px 10px 84px;
     display: grid;
     align-content: start;
     justify-items: center;
     gap: 3px;
+  }
+
+  .letter-step-controls {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .letter-step-controls .icon-btn {
+    min-width: 60px;
+    min-height: 52px;
+    font-size: 1.4rem;
   }
 
   .label {
@@ -755,12 +791,8 @@ h1 {
 
   .hero-controls #speak-letter-btn,
   .hero-controls #speak-word-btn {
-    min-height: 56px;
-    font-size: 1.7rem;
-  }
-
-  .hero-controls #learned-btn {
-    grid-column: 1 / -1;
+    min-height: 68px;
+    font-size: 1.95rem;
   }
 
   .progress-card {

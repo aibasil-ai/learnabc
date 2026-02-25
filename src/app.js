@@ -6,6 +6,7 @@ import {
   getRewardStatus,
   markLetterLearned,
   normalizeRewardSessions,
+  pickNextUnlearnedLetterIndex,
   resetProgress,
   updateSettings
 } from './reward-engine.js';
@@ -22,6 +23,7 @@ import {
 } from './utils.js';
 
 const STORAGE_KEY = 'abc-adventure-state-v1';
+const LETTER_SEQUENCE = LETTERS.map((item) => item.letter);
 
 let state = loadState();
 let currentLetterIndex = 0;
@@ -109,6 +111,7 @@ const dom = {
   rewardOrientationInput: document.getElementById('reward-orientation'),
   newPinInput: document.getElementById('new-pin'),
   rewardEnabledInput: document.getElementById('reward-enabled'),
+  randomLearningInput: document.getElementById('random-learning-enabled'),
   saveSettingsBtn: document.getElementById('save-settings-btn'),
   resetProgressBtn: document.getElementById('reset-progress-btn'),
   parentCloseBtn: document.getElementById('parent-close-btn'),
@@ -1283,6 +1286,7 @@ function openParentOverlay() {
   dom.rewardOrientationInput.value = normalizeRewardOrientation(state.settings.rewardOrientation);
   dom.newPinInput.value = '';
   dom.rewardEnabledInput.checked = Boolean(state.settings.rewardEnabled);
+  dom.randomLearningInput.checked = Boolean(state.settings.randomLearningEnabled);
 }
 
 function closeParentOverlay() {
@@ -1327,7 +1331,8 @@ function saveParentSettings() {
     youtubeVideoId: parsedVideoId,
     rewardOrientation,
     parentPin,
-    rewardEnabled: dom.rewardEnabledInput.checked
+    rewardEnabled: dom.rewardEnabledInput.checked,
+    randomLearningEnabled: dom.randomLearningInput.checked
   });
   state = normalizeRewardSessions(state);
   state = {
@@ -1352,12 +1357,16 @@ function resetLearningProgress() {
     return;
   }
 
-  state = resetProgress(state);
+  const resetRewardPlayback = window.confirm(
+    '是否同時重置影片播放進度？\n按「確定」會從影片開頭播放；按「取消」會保留目前續播位置。'
+  );
+
+  state = resetProgress(state, { resetRewardPlayback });
   setupNextQuizQuestion();
   persistState();
   renderAll();
   closeParentOverlay();
-  showToast('學習進度已重設。');
+  showToast(resetRewardPlayback ? '學習進度與影片播放進度已重設。' : '學習進度已重設，影片續播位置已保留。');
 }
 
 function persistState() {
@@ -1417,7 +1426,8 @@ function normalizeSettings(settings) {
     youtubeVideoId,
     rewardOrientation,
     parentPin,
-    rewardEnabled: settings.rewardEnabled !== false
+    rewardEnabled: settings.rewardEnabled !== false,
+    randomLearningEnabled: settings.randomLearningEnabled === true
   };
 }
 
@@ -1568,19 +1578,18 @@ function dedupeLetters(input) {
 }
 
 function jumpToNextUnlearnedLetter(learnedLetter) {
-  const startIndex = LETTERS.findIndex((item) => item.letter === learnedLetter);
-  if (startIndex < 0) {
+  const nextIndex = pickNextUnlearnedLetterIndex({
+    letters: LETTER_SEQUENCE,
+    learnedLetters: state.learnedLetters,
+    currentLetter: learnedLetter,
+    randomLearningEnabled: Boolean(state.settings.randomLearningEnabled)
+  });
+
+  if (nextIndex === null) {
     return;
   }
 
-  for (let offset = 1; offset <= LETTERS.length; offset += 1) {
-    const nextIndex = (startIndex + offset) % LETTERS.length;
-    const nextLetter = LETTERS[nextIndex].letter;
-    if (!state.learnedLetters.includes(nextLetter)) {
-      selectLetterByIndex(nextIndex);
-      return;
-    }
-  }
+  selectLetterByIndex(nextIndex);
 }
 
 function playWrongAnswerSound() {

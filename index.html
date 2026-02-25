@@ -45,10 +45,12 @@
           <div id="letter-display" class="letter-display">A</div>
           <div id="emoji-display" class="emoji-display">🍎</div>
           <p id="word-display" class="word-display">Apple</p>
+          <div class="letter-step-controls" aria-label="字母切換">
+            <button id="prev-letter-btn" class="action-btn icon-btn" aria-label="上一個" title="上一個">⏮</button>
+            <button id="next-letter-btn" class="action-btn icon-btn" aria-label="下一個" title="下一個">⏭</button>
+          </div>
         </div>
         <div class="hero-controls">
-          <button id="prev-letter-btn" class="action-btn icon-btn" aria-label="上一個" title="上一個">⏮</button>
-          <button id="next-letter-btn" class="action-btn icon-btn" aria-label="下一個" title="下一個">⏭</button>
           <button id="speak-letter-btn" class="action-btn icon-btn" aria-label="播放字母" title="播放字母">🔤</button>
           <button id="speak-word-btn" class="action-btn icon-btn" aria-label="播放單字" title="播放單字">🗣️</button>
           <button id="learned-btn" class="action-btn primary icon-btn" aria-label="我學會了" title="我學會了">✅</button>
@@ -165,6 +167,11 @@
         <label class="check-row" for="reward-enabled">
           <input id="reward-enabled" type="checkbox" />
           啟用影片獎勵
+        </label>
+
+        <label class="check-row" for="random-learning-enabled">
+          <input id="random-learning-enabled" type="checkbox" />
+          字母學習採亂數順序（完成後隨機跳下一個未學字母）
         </label>
 
         <div class="modal-row">

@@ -8,7 +8,9 @@ import {
   getRewardStatus,
   consumeRewardSession,
   normalizeRewardSessions,
-  updateSettings
+  updateSettings,
+  resetProgress,
+  pickNextUnlearnedLetterIndex
 } from '../src/reward-engine.js';
 
 test('每學滿 3 個不同字母會解鎖 1 次獎勵', () => {
@@ -99,4 +101,76 @@ test('建立初始狀態時可保留影片方向設定', () => {
 
   assert.equal(portraitState.settings.rewardOrientation, 'portrait');
   assert.equal(defaultState.settings.rewardOrientation, 'landscape');
+});
+
+test('依序模式會跳到下一個尚未學習的字母', () => {
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const learnedLetters = ['A', 'B', 'D'];
+
+  const nextIndex = pickNextUnlearnedLetterIndex({
+    letters,
+    learnedLetters,
+    currentLetter: 'B',
+    randomLearningEnabled: false
+  });
+
+  assert.equal(nextIndex, 2);
+  assert.equal(letters[nextIndex], 'C');
+});
+
+test('亂數模式會從尚未學習的字母中隨機選下一個', () => {
+  const letters = ['A', 'B', 'C', 'D', 'E'];
+  const learnedLetters = ['A', 'C'];
+
+  const nextIndex = pickNextUnlearnedLetterIndex({
+    letters,
+    learnedLetters,
+    currentLetter: 'A',
+    randomLearningEnabled: true,
+    randomFn: () => 0.8
+  });
+
+  assert.equal(nextIndex, 4);
+  assert.equal(letters[nextIndex], 'E');
+});
+
+test('重設學習進度時可選擇保留影片播放進度', () => {
+  let state = createInitialState(DEFAULT_SETTINGS);
+  state = {
+    ...state,
+    learnedLetters: ['A', 'B'],
+    watchedSessions: 1,
+    score: 25,
+    rewardPlayback: {
+      videoId: 'abc123xyz89',
+      timeSeconds: 88
+    }
+  };
+
+  const resetState = resetProgress(state, { resetRewardPlayback: false });
+
+  assert.deepEqual(resetState.learnedLetters, []);
+  assert.equal(resetState.score, 0);
+  assert.deepEqual(resetState.rewardPlayback, {
+    videoId: 'abc123xyz89',
+    timeSeconds: 88
+  });
+});
+
+test('重設學習進度時可同時重置影片播放進度', () => {
+  let state = createInitialState(DEFAULT_SETTINGS);
+  state = {
+    ...state,
+    rewardPlayback: {
+      videoId: 'abc123xyz89',
+      timeSeconds: 88
+    }
+  };
+
+  const resetState = resetProgress(state, { resetRewardPlayback: true });
+
+  assert.deepEqual(resetState.rewardPlayback, {
+    videoId: state.settings.youtubeVideoId,
+    timeSeconds: 0
+  });
 });
