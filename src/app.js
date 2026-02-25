@@ -116,7 +116,7 @@ const dom = {
   parentOverlay: document.getElementById('parent-overlay'),
   lettersPerRewardInput: document.getElementById('letters-per-reward'),
   rewardSecondsInput: document.getElementById('reward-seconds'),
-  completionRewardMinutesInput: document.getElementById('completion-reward-minutes'),
+  completionRewardSecondsInput: document.getElementById('completion-reward-seconds'),
   youtubeInput: document.getElementById('youtube-input'),
   rewardOrientationInput: document.getElementById('reward-orientation'),
   learnCheckPromptTypeInput: document.getElementById('learn-check-prompt-type'),
@@ -1320,7 +1320,7 @@ function openParentOverlay() {
   dom.parentOverlay.classList.remove('hidden');
   dom.lettersPerRewardInput.value = state.settings.lettersPerReward;
   dom.rewardSecondsInput.value = state.settings.rewardSeconds;
-  dom.completionRewardMinutesInput.value = Math.max(1, Math.round(state.settings.completionRewardSeconds / 60));
+  dom.completionRewardSecondsInput.value = state.settings.completionRewardSeconds;
   dom.youtubeInput.value = state.settings.youtubeVideoId;
   dom.rewardOrientationInput.value = normalizeRewardOrientation(state.settings.rewardOrientation);
   dom.learnCheckPromptTypeInput.value = normalizeLearnCheckPromptType(state.settings.learnCheckPromptType);
@@ -1345,12 +1345,11 @@ function saveParentSettings() {
     10,
     600
   );
-  const completionRewardMinutes = clamp(
-    Number(dom.completionRewardMinutesInput.value) || Math.round(DEFAULT_SETTINGS.completionRewardSeconds / 60),
-    1,
-    30
+  const completionRewardSeconds = clamp(
+    Number(dom.completionRewardSecondsInput.value) || DEFAULT_SETTINGS.completionRewardSeconds,
+    10,
+    1800
   );
-  const completionRewardSeconds = completionRewardMinutes * 60;
   const youtubeInput = dom.youtubeInput.value.trim();
   const rewardOrientation = normalizeRewardOrientation(dom.rewardOrientationInput.value);
   const learnCheckPromptType = normalizeLearnCheckPromptType(dom.learnCheckPromptTypeInput.value);
