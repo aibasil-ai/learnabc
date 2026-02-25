@@ -10,7 +10,9 @@ import {
   normalizeRewardSessions,
   updateSettings,
   resetProgress,
-  pickNextUnlearnedLetterIndex
+  pickNextUnlearnedLetterIndex,
+  hasCompletionRewardAvailable,
+  consumeCompletionReward
 } from '../src/reward-engine.js';
 
 test('每學滿 3 個不同字母會解鎖 1 次獎勵', () => {
@@ -173,4 +175,28 @@ test('重設學習進度時可同時重置影片播放進度', () => {
     videoId: state.settings.youtubeVideoId,
     timeSeconds: 0
   });
+});
+
+test('全部字母都學完且尚未領取時可使用完成獎勵', () => {
+  let state = createInitialState(DEFAULT_SETTINGS);
+  state = {
+    ...state,
+    learnedLetters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+    completionRewardClaimed: false
+  };
+
+  assert.equal(hasCompletionRewardAvailable(state, 26), true);
+});
+
+test('完成獎勵領取後不再可用', () => {
+  let state = createInitialState(DEFAULT_SETTINGS);
+  state = {
+    ...state,
+    learnedLetters: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
+    completionRewardClaimed: false
+  };
+
+  state = consumeCompletionReward(state, 26);
+  assert.equal(state.completionRewardClaimed, true);
+  assert.equal(hasCompletionRewardAvailable(state, 26), false);
 });

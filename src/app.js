@@ -1,9 +1,11 @@
 import { LETTERS, getLetterItem } from './data.js';
 import {
+  consumeCompletionReward,
   DEFAULT_SETTINGS,
   consumeRewardSession,
   createInitialState,
   getRewardStatus,
+  hasCompletionRewardAvailable,
   markLetterLearned,
   normalizeRewardSessions,
   pickNextUnlearnedLetterIndex,
@@ -11,10 +13,13 @@ import {
   updateSettings
 } from './reward-engine.js';
 import {
+  LEARN_CHECK_PROMPT_TYPES,
+  buildLearnCheckPrompt,
   buildQuizPrompt,
   buildRewardVideoCandidates,
   clamp,
   getYouTubeErrorMessage,
+  normalizeLearnCheckPromptType,
   normalizeRewardPlayback,
   parseYouTubeVideoId,
   resolveRewardStart,
@@ -24,6 +29,10 @@ import {
 
 const STORAGE_KEY = 'abc-adventure-state-v1';
 const LETTER_SEQUENCE = LETTERS.map((item) => item.letter);
+const REWARD_SESSION_TYPES = {
+  STANDARD: 'standard',
+  COMPLETION: 'completion'
+};
 
 let state = loadState();
 let currentLetterIndex = 0;
@@ -107,8 +116,10 @@ const dom = {
   parentOverlay: document.getElementById('parent-overlay'),
   lettersPerRewardInput: document.getElementById('letters-per-reward'),
   rewardSecondsInput: document.getElementById('reward-seconds'),
+  completionRewardMinutesInput: document.getElementById('completion-reward-minutes'),
   youtubeInput: document.getElementById('youtube-input'),
   rewardOrientationInput: document.getElementById('reward-orientation'),
+  learnCheckPromptTypeInput: document.getElementById('learn-check-prompt-type'),
   newPinInput: document.getElementById('new-pin'),
   rewardEnabledInput: document.getElementById('reward-enabled'),
   randomLearningInput: document.getElementById('random-learning-enabled'),
@@ -395,6 +406,7 @@ function maybeResumeActiveReward() {
     resume: true,
     remainingSeconds,
     consumed: Boolean(activeReward.consumed),
+    rewardType: activeReward.rewardType || REWARD_SESSION_TYPES.STANDARD,
     requireManualStart: true
   });
 }
@@ -422,6 +434,7 @@ function renderProgress() {
   const learnedCount = state.learnedLetters.length;
   const progressPercent = (learnedCount / LETTERS.length) * 100;
   const status = getRewardStatus(state);
+  const completionRewardAvailable = hasCompletionRewardAvailable(state, LETTERS.length);
 
   dom.scoreText.textContent = `分數：${state.score}`;
   dom.progressText.textContent = `${learnedCount} / ${LETTERS.length} 字母`;
@@ -429,6 +442,8 @@ function renderProgress() {
 
   if (!state.settings.rewardEnabled) {
     dom.rewardStatus.textContent = '影片獎勵目前已停用（可在家長專區開啟）';
+  } else if (completionRewardAvailable) {
+    dom.rewardStatus.textContent = `全部字母都學完了！可播放 ${state.settings.completionRewardSeconds} 秒畢業獎勵影片。`;
   } else if (status.availableSessions > 0) {
     dom.rewardStatus.textContent = `已解鎖 ${status.availableSessions} 次影片獎勵，可立即播放。`;
   } else {
@@ -436,7 +451,8 @@ function renderProgress() {
     dom.rewardStatus.textContent = `再學 ${remain} 個字母可看 ${state.settings.rewardSeconds} 秒影片`;
   }
 
-  dom.manualRewardBtn.disabled = !state.settings.rewardEnabled || status.availableSessions <= 0 || isRewardPlaying;
+  dom.manualRewardBtn.disabled =
+    !state.settings.rewardEnabled || (!completionRewardAvailable && status.availableSessions <= 0) || isRewardPlaying;
 
   renderStarStrip();
 }
@@ -606,14 +622,23 @@ function renderLearnCheck() {
   }
 
   dom.learnCheckTitle.textContent = `學會挑戰 ${learnCheckState.targetLetter}`;
-  const learnCheckPromptText = `字母「${learnCheckState.targetLetter}」是哪一個？`;
+  const promptType = normalizeLearnCheckPromptType(state.settings.learnCheckPromptType);
+  const learnCheckPromptText = buildLearnCheckPrompt({
+    promptType,
+    targetLetter: learnCheckState.targetLetter,
+    targetWord: learnCheckState.targetWord
+  });
   dom.learnCheckPrompt.textContent = learnCheckPromptText;
   dom.learnCheckResult.textContent = '答對才算學會喔！';
   dom.learnCheckOptions.innerHTML = '';
 
   if (learnCheckPromptText !== lastSpokenLearnCheckPrompt) {
     lastSpokenLearnCheckPrompt = learnCheckPromptText;
-    speakLearnCheckPrompt(learnCheckState.targetLetter);
+    if (promptType === LEARN_CHECK_PROMPT_TYPES.WORD_INITIAL) {
+      speakQuizPrompt(learnCheckState.targetWord);
+    } else {
+      speakLearnCheckPrompt(learnCheckState.targetLetter);
+    }
   }
 
   learnCheckState.options.forEach((optionLetter) => {
@@ -713,8 +738,7 @@ function maybeStartRewardSession() {
     return;
   }
 
-  const status = getRewardStatus(state);
-  if (status.availableSessions > 0) {
+  if (getAvailableRewardSession()) {
     startRewardSession({ resume: false });
   }
 }
@@ -727,15 +751,21 @@ async function startRewardSession(options = {}) {
   stopSpeech();
 
   if (!isResume) {
-    const status = getRewardStatus(state);
-    if (status.availableSessions <= 0) {
+    if (!getAvailableRewardSession()) {
       showToast('目前尚未解鎖影片獎勵。');
       return;
     }
   }
 
+  const rewardSessionRequest = isResume
+    ? null
+    : getAvailableRewardSession() || {
+        rewardType: REWARD_SESSION_TYPES.STANDARD,
+        rewardSeconds: state.settings.rewardSeconds
+      };
+
   rewardSecondsLeft = clamp(
-    Number(options.remainingSeconds ?? Number(state.settings.rewardSeconds)),
+    Number(options.remainingSeconds ?? Number(rewardSessionRequest?.rewardSeconds ?? state.settings.rewardSeconds)),
     1,
     600
   );
@@ -747,6 +777,7 @@ async function startRewardSession(options = {}) {
   rewardSession = {
     playbackStarted: false,
     consumed: Boolean(options.consumed),
+    rewardType: options.rewardType || rewardSessionRequest?.rewardType || REWARD_SESSION_TYPES.STANDARD,
     autoplayRetried: false,
     candidates: buildRewardVideoCandidates(state.settings.youtubeVideoId),
     currentIndex: 0,
@@ -957,7 +988,11 @@ function consumeRewardIfNeeded() {
     return;
   }
 
-  state = consumeRewardSession(state);
+  if (rewardSession.rewardType === REWARD_SESSION_TYPES.COMPLETION) {
+    state = consumeCompletionReward(state, LETTERS.length);
+  } else {
+    state = consumeRewardSession(state);
+  }
   rewardSession.consumed = true;
   syncActiveRewardState();
   renderProgress();
@@ -1041,12 +1076,14 @@ function saveRewardPlaybackProgress(shouldPersist = true) {
 
 function syncActiveRewardState(shouldPersist = true) {
   const consumed = Boolean(rewardSession?.consumed);
+  const rewardType = rewardSession?.rewardType || REWARD_SESSION_TYPES.STANDARD;
   state = {
     ...state,
     activeReward: {
       inProgress: Boolean(isRewardPlaying),
       remainingSeconds: isRewardPlaying ? Math.max(0, Math.floor(rewardSecondsLeft)) : 0,
-      consumed
+      consumed,
+      rewardType: isRewardPlaying ? rewardType : null
     }
   };
 
@@ -1070,7 +1107,8 @@ function clearActiveRewardState() {
     activeReward: {
       inProgress: false,
       remainingSeconds: 0,
-      consumed: false
+      consumed: false,
+      rewardType: null
     }
   };
   persistState();
@@ -1282,8 +1320,10 @@ function openParentOverlay() {
   dom.parentOverlay.classList.remove('hidden');
   dom.lettersPerRewardInput.value = state.settings.lettersPerReward;
   dom.rewardSecondsInput.value = state.settings.rewardSeconds;
+  dom.completionRewardMinutesInput.value = Math.max(1, Math.round(state.settings.completionRewardSeconds / 60));
   dom.youtubeInput.value = state.settings.youtubeVideoId;
   dom.rewardOrientationInput.value = normalizeRewardOrientation(state.settings.rewardOrientation);
+  dom.learnCheckPromptTypeInput.value = normalizeLearnCheckPromptType(state.settings.learnCheckPromptType);
   dom.newPinInput.value = '';
   dom.rewardEnabledInput.checked = Boolean(state.settings.rewardEnabled);
   dom.randomLearningInput.checked = Boolean(state.settings.randomLearningEnabled);
@@ -1305,8 +1345,15 @@ function saveParentSettings() {
     10,
     600
   );
+  const completionRewardMinutes = clamp(
+    Number(dom.completionRewardMinutesInput.value) || Math.round(DEFAULT_SETTINGS.completionRewardSeconds / 60),
+    1,
+    30
+  );
+  const completionRewardSeconds = completionRewardMinutes * 60;
   const youtubeInput = dom.youtubeInput.value.trim();
   const rewardOrientation = normalizeRewardOrientation(dom.rewardOrientationInput.value);
+  const learnCheckPromptType = normalizeLearnCheckPromptType(dom.learnCheckPromptTypeInput.value);
   const parsedVideoId = parseYouTubeVideoId(youtubeInput);
 
   if (!parsedVideoId) {
@@ -1328,8 +1375,10 @@ function saveParentSettings() {
   state = updateSettings(state, {
     lettersPerReward,
     rewardSeconds,
+    completionRewardSeconds,
     youtubeVideoId: parsedVideoId,
     rewardOrientation,
+    learnCheckPromptType,
     parentPin,
     rewardEnabled: dom.rewardEnabledInput.checked,
     randomLearningEnabled: dom.randomLearningInput.checked
@@ -1394,6 +1443,7 @@ function loadState() {
       score: Math.max(0, Number(parsed.score) || 0),
       streak: Math.max(0, Number(parsed.streak) || 0),
       lastLearnedLetter: getLetterItem(parsed.lastLearnedLetter) ? parsed.lastLearnedLetter : null,
+      completionRewardClaimed: Boolean(parsed.completionRewardClaimed),
       rewardPlayback,
       activeReward
     });
@@ -1412,6 +1462,16 @@ function normalizeSettings(settings) {
     10,
     600
   );
+  const completionRewardSeconds = clamp(
+    Number(
+      settings.completionRewardSeconds ??
+        (Number.isFinite(Number(settings.completionRewardMinutes))
+          ? Number(settings.completionRewardMinutes) * 60
+          : NaN)
+    ) || DEFAULT_SETTINGS.completionRewardSeconds,
+    60,
+    1800
+  );
   const youtubeVideoId =
     parseYouTubeVideoId(settings.youtubeVideoId) || parseYouTubeVideoId(DEFAULT_SETTINGS.youtubeVideoId);
 
@@ -1423,8 +1483,10 @@ function normalizeSettings(settings) {
     ...DEFAULT_SETTINGS,
     lettersPerReward,
     rewardSeconds,
+    completionRewardSeconds,
     youtubeVideoId,
     rewardOrientation,
+    learnCheckPromptType: normalizeLearnCheckPromptType(settings.learnCheckPromptType),
     parentPin,
     rewardEnabled: settings.rewardEnabled !== false,
     randomLearningEnabled: settings.randomLearningEnabled === true
@@ -1550,11 +1612,36 @@ function updateFullscreenButtonUI() {
 
 function normalizeActiveReward(value) {
   const remainingSeconds = clamp(Number(value?.remainingSeconds) || 0, 0, 600);
+  const inProgress = Boolean(value?.inProgress) && remainingSeconds > 0;
+  const rewardType =
+    value?.rewardType === REWARD_SESSION_TYPES.COMPLETION
+      ? REWARD_SESSION_TYPES.COMPLETION
+      : REWARD_SESSION_TYPES.STANDARD;
   return {
-    inProgress: Boolean(value?.inProgress) && remainingSeconds > 0,
+    inProgress,
     remainingSeconds,
-    consumed: Boolean(value?.consumed)
+    consumed: Boolean(value?.consumed),
+    rewardType: inProgress ? rewardType : null
   };
+}
+
+function getAvailableRewardSession() {
+  if (hasCompletionRewardAvailable(state, LETTERS.length)) {
+    return {
+      rewardType: REWARD_SESSION_TYPES.COMPLETION,
+      rewardSeconds: state.settings.completionRewardSeconds
+    };
+  }
+
+  const status = getRewardStatus(state);
+  if (status.availableSessions > 0) {
+    return {
+      rewardType: REWARD_SESSION_TYPES.STANDARD,
+      rewardSeconds: state.settings.rewardSeconds
+    };
+  }
+
+  return null;
 }
 
 function dedupeLetters(input) {

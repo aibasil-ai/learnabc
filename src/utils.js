@@ -4,6 +4,10 @@ export const DEFAULT_REWARD_VIDEO_FALLBACKS = [
   'SJ2rEpCJNQk',
   'M7lc1UVf-VE'
 ];
+export const LEARN_CHECK_PROMPT_TYPES = {
+  LETTER_IDENTIFICATION: 'letter_identification',
+  WORD_INITIAL: 'word_initial'
+};
 
 const MAX_REWARD_PLAYBACK_SECONDS = 60 * 60 * 6;
 
@@ -108,6 +112,23 @@ export function resolveRewardStart(rewardPlayback, candidates) {
 
 export function buildQuizPrompt(targetWord) {
   return `「${String(targetWord || '')}」是由哪個英文字母開頭？`;
+}
+
+export function normalizeLearnCheckPromptType(value) {
+  if (value === LEARN_CHECK_PROMPT_TYPES.WORD_INITIAL) {
+    return LEARN_CHECK_PROMPT_TYPES.WORD_INITIAL;
+  }
+
+  return LEARN_CHECK_PROMPT_TYPES.LETTER_IDENTIFICATION;
+}
+
+export function buildLearnCheckPrompt({ promptType, targetLetter, targetWord }) {
+  const normalizedPromptType = normalizeLearnCheckPromptType(promptType);
+  if (normalizedPromptType === LEARN_CHECK_PROMPT_TYPES.WORD_INITIAL) {
+    return buildQuizPrompt(targetWord);
+  }
+
+  return `字母「${String(targetLetter || '')}」是哪一個？`;
 }
 
 export function shouldSpeakPrompt(currentPrompt, lastPrompt, forceSpeak = false) {

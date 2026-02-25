@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  LEARN_CHECK_PROMPT_TYPES,
+  buildLearnCheckPrompt,
   buildQuizPrompt,
   buildRewardVideoCandidates,
   getYouTubeErrorMessage,
+  normalizeLearnCheckPromptType,
   normalizeRewardPlayback,
   parseYouTubeVideoId,
   resolveRewardStart,
@@ -66,6 +69,31 @@ test('resolveRewardStart 會找出候選影片中的續播位置', () => {
 
 test('buildQuizPrompt 會產生測驗題目文字', () => {
   assert.equal(buildQuizPrompt('Elephant'), '「Elephant」是由哪個英文字母開頭？');
+});
+
+test('buildLearnCheckPrompt 在字母辨識題型會產生字母題目', () => {
+  const prompt = buildLearnCheckPrompt({
+    promptType: LEARN_CHECK_PROMPT_TYPES.LETTER_IDENTIFICATION,
+    targetLetter: 'B',
+    targetWord: 'Ball'
+  });
+  assert.equal(prompt, '字母「B」是哪一個？');
+});
+
+test('buildLearnCheckPrompt 在單字開頭題型會產生單字題目', () => {
+  const prompt = buildLearnCheckPrompt({
+    promptType: LEARN_CHECK_PROMPT_TYPES.WORD_INITIAL,
+    targetLetter: 'B',
+    targetWord: 'Ball'
+  });
+  assert.equal(prompt, '「Ball」是由哪個英文字母開頭？');
+});
+
+test('normalizeLearnCheckPromptType 預設回傳字母辨識題型', () => {
+  assert.equal(
+    normalizeLearnCheckPromptType('invalid-value'),
+    LEARN_CHECK_PROMPT_TYPES.LETTER_IDENTIFICATION
+  );
 });
 
 test('shouldSpeakPrompt 在文字改變時回傳 true', () => {

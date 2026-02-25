@@ -152,6 +152,9 @@
         <label for="reward-seconds">每次影片秒數</label>
         <input id="reward-seconds" type="number" min="10" max="600" step="10" />
 
+        <label for="completion-reward-minutes">全部字母學完後影片分鐘數</label>
+        <input id="completion-reward-minutes" type="number" min="1" max="30" step="1" />
+
         <label for="youtube-input">YouTube 影片連結或影片 ID</label>
         <input id="youtube-input" type="text" />
 
@@ -159,6 +162,12 @@
         <select id="reward-orientation">
           <option value="landscape">橫向（16:9）</option>
           <option value="portrait">直向（9:16）</option>
+        </select>
+
+        <label for="learn-check-prompt-type">學會挑戰題型</label>
+        <select id="learn-check-prompt-type">
+          <option value="letter_identification">字母「B」是哪一個？</option>
+          <option value="word_initial">「Ball」是由哪個英文字母開頭？</option>
         </select>
 
         <label for="new-pin">變更家長 PIN（4-8 碼）</label>

@@ -1,11 +1,13 @@
 export const DEFAULT_SETTINGS = {
   lettersPerReward: 3,
   rewardSeconds: 30,
+  completionRewardSeconds: 180,
   youtubeVideoId: '-yG4mBzGwq8',
   rewardOrientation: 'landscape',
   parentPin: '1234',
   rewardEnabled: true,
-  randomLearningEnabled: false
+  randomLearningEnabled: false,
+  learnCheckPromptType: 'letter_identification'
 };
 
 export function createInitialState(settings = DEFAULT_SETTINGS) {
@@ -21,6 +23,7 @@ export function createInitialState(settings = DEFAULT_SETTINGS) {
     lastLearnedLetter: null,
     score: 0,
     streak: 0,
+    completionRewardClaimed: false,
     rewardPlayback: {
       videoId: mergedSettings.youtubeVideoId,
       timeSeconds: 0
@@ -28,7 +31,8 @@ export function createInitialState(settings = DEFAULT_SETTINGS) {
     activeReward: {
       inProgress: false,
       remainingSeconds: 0,
-      consumed: false
+      consumed: false,
+      rewardType: null
     }
   };
 }
@@ -130,12 +134,31 @@ export function resetProgress(state, options = {}) {
     lastLearnedLetter: null,
     score: 0,
     streak: 0,
+    completionRewardClaimed: false,
     rewardPlayback: nextRewardPlayback,
     activeReward: {
       inProgress: false,
       remainingSeconds: 0,
-      consumed: false
+      consumed: false,
+      rewardType: null
     }
+  };
+}
+
+export function hasCompletionRewardAvailable(state, totalLetters = 26) {
+  const learnedCount = Array.isArray(state.learnedLetters) ? state.learnedLetters.length : 0;
+  const requiredCount = Math.max(1, Number(totalLetters) || 26);
+  return learnedCount >= requiredCount && !Boolean(state.completionRewardClaimed);
+}
+
+export function consumeCompletionReward(state, totalLetters = 26) {
+  if (!hasCompletionRewardAvailable(state, totalLetters)) {
+    return state;
+  }
+
+  return {
+    ...state,
+    completionRewardClaimed: true
   };
 }
 
