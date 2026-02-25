@@ -405,8 +405,8 @@ h1 {
 
 #speak-letter-btn,
 #speak-word-btn {
-  min-height: 66px;
-  font-size: 1.95rem;
+  min-height: 74px;
+  font-size: 2.2rem;
 }
 
 .overlay {
@@ -791,8 +791,8 @@ h1 {
 
   .hero-controls #speak-letter-btn,
   .hero-controls #speak-word-btn {
-    min-height: 68px;
-    font-size: 1.95rem;
+    min-height: 76px;
+    font-size: 2.25rem;
   }
 
   .progress-card {
